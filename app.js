@@ -6,7 +6,10 @@ const ARABIC_MONTHS = [
     "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"
 ];
 
-const DEFAULT_YEAR = 2025;
+const CURRENT_DATE = new Date();
+const DEFAULT_YEAR = CURRENT_DATE.getFullYear();
+const CURRENT_MONTH_INDEX = CURRENT_DATE.getMonth(); // 0 to 11
+
 const STORAGE_KEY_TRANSACTIONS = "family_fund_transactions";
 const STORAGE_KEY_MEMBERS = "family_fund_members";
 const STORAGE_KEY_YEARS = "family_fund_years";
@@ -99,34 +102,44 @@ document.addEventListener("DOMContentLoaded", () => {
 // ==========================================
 function initYearSelector() {
     const yearSelect = document.getElementById("year-select");
+    const entryYearSelect = document.getElementById("entry-year");
     const years = loadYears();
     
     if (!years.includes(DEFAULT_YEAR)) {
         saveYear(DEFAULT_YEAR);
+        years.push(DEFAULT_YEAR);
+        years.sort((a, b) => b - a);
     }
     
-    yearSelect.innerHTML = "";
-    loadYears().forEach(year => {
-        const option = document.createElement("option");
-        option.value = year;
-        option.textContent = year;
-        yearSelect.appendChild(option);
+    let optionsHTML = "";
+    years.forEach(year => {
+        optionsHTML += `<option value="${year}">${year}</option>`;
     });
 
-    yearSelect.value = currentYear;
+    if (yearSelect) {
+        yearSelect.innerHTML = optionsHTML;
+        yearSelect.value = currentYear;
+    }
+    
+    if (entryYearSelect) {
+        entryYearSelect.innerHTML = optionsHTML;
+        entryYearSelect.value = DEFAULT_YEAR;
+    }
 }
 
 function initMonthSelector() {
     const monthSelect = document.getElementById("month-select");
     monthSelect.innerHTML = "";
-    ARABIC_MONTHS.forEach(month => {
+    ARABIC_MONTHS.forEach((month, index) => {
         const option = document.createElement("option");
         option.value = month;
         option.textContent = month;
+        if (index === CURRENT_MONTH_INDEX) {
+            option.selected = true; // التحديد التلقائي للشهر الحالي
+        }
         monthSelect.appendChild(option);
     });
 }
-
 function renderMemberDropdown() {
     const memberSelect = document.getElementById("member-select");
     const members = loadMembers();
@@ -254,6 +267,7 @@ function handleAddMember() {
 function handleFormSubmit(e) {
     e.preventDefault();
 
+    const entryYear = parseInt(document.getElementById("entry-year").value, 10);
     const type = document.getElementById("type-select").value;
     const month = document.getElementById("month-select").value;
     const memberVal = document.getElementById("member-select").value;
@@ -267,7 +281,7 @@ function handleFormSubmit(e) {
 
     const newTransaction = {
         id: Date.now(),
-        year: currentYear,
+        year: entryYear,
         month: month,
         type: type,
         member: memberVal && memberVal !== "ADD_NEW" ? parseInt(memberVal, 10) : null,
@@ -356,16 +370,23 @@ function renderAssociationTable(transactions, members) {
         let currentYearSum = 0;
         let cellsHTML = "";
 
-        ARABIC_MONTHS.forEach(month => {
+        ARABIC_MONTHS.forEach((month, index) => {
             const txns = assocTxns.filter(t => t.member === member.id && t.month === month);
             const monthSum = txns.reduce((acc, curr) => acc + curr.amount, 0);
+
+            // التحقق مما إذا كان الشهر في المستقبل مقارنة بالتاريخ الحالي
+            const isFutureMonth = (currentYear > DEFAULT_YEAR) || (currentYear === DEFAULT_YEAR && index > CURRENT_MONTH_INDEX);
 
             if (monthSum > 0) {
                 currentYearSum += monthSum;
                 cellsHTML += `<td class="paid-cell">${monthSum.toFixed(2)}</td>`;
-            } else {
+            } else if (!isFutureMonth) {
+                // يحسب كغير مدفوع فقط إذا لم يكن شهراً مستقبلياً
                 unpaidCount++;
                 cellsHTML += `<td class="unpaid-cell">-</td>`;
+            } else {
+                // خلية فارغة للأشهر المستقبلية بدون تنبيه أحمر
+                cellsHTML += `<td>-</td>`;
             }
         });
 
