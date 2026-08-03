@@ -12,7 +12,32 @@ const STORAGE_KEY_MEMBERS = "family_fund_members";
 const STORAGE_KEY_YEARS = "family_fund_years";
 
 // ==========================================
-// 2. DATA STORAGE WRAPPERS (Google Sheets Ready)
+// 2. GOOGLE SHEETS BACKUP PLACEHOLDER (INACTIVE)
+// ==========================================
+const GOOGLE_SHEETS_CONFIG = {
+    enabled: false, // Change to true when activating Google Sheets backup
+    webAppUrl: ""   // Insert Google Apps Script Web App URL here later
+};
+
+async function syncToGoogleSheetsPlaceholder(action, data) {
+    if (!GOOGLE_SHEETS_CONFIG.enabled || !GOOGLE_SHEETS_CONFIG.webAppUrl) {
+        return; // Inactive placeholder - reserved for future implementation
+    }
+    
+    try {
+        await fetch(GOOGLE_SHEETS_CONFIG.webAppUrl, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action, data, timestamp: new Date().toISOString() })
+        });
+    } catch (err) {
+        console.warn("Google Sheets Sync Placeholder Error:", err);
+    }
+}
+
+// ==========================================
+// 3. DATA STORAGE WRAPPERS (Google Sheets Ready)
 // ==========================================
 function loadTransactions() {
     const data = localStorage.getItem(STORAGE_KEY_TRANSACTIONS);
@@ -23,6 +48,9 @@ function saveTransaction(transaction) {
     const transactions = loadTransactions();
     transactions.push(transaction);
     localStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(transactions));
+    
+    // Backup hook
+    syncToGoogleSheetsPlaceholder("SAVE_TRANSACTION", transaction);
 }
 
 function loadMembers() {
@@ -34,6 +62,9 @@ function saveMember(member) {
     const members = loadMembers();
     members.push(member);
     localStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(members));
+    
+    // Backup hook
+    syncToGoogleSheetsPlaceholder("SAVE_MEMBER", member);
 }
 
 function loadYears() {
@@ -51,7 +82,7 @@ function saveYear(year) {
 }
 
 // ==========================================
-// 3. APP STATE & INITIALIZATION
+// 4. APP STATE & INITIALIZATION
 // ==========================================
 let currentYear = DEFAULT_YEAR;
 
@@ -64,7 +95,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // ==========================================
-// 4. UI INITIALIZATION & POPULATION
+// 5. UI INITIALIZATION & POPULATION
 // ==========================================
 function initYearSelector() {
     const yearSelect = document.getElementById("year-select");
@@ -108,13 +139,13 @@ function renderMemberDropdown() {
     members.forEach(member => {
         const option = document.createElement("option");
         option.value = member.id;
-        option.textContent = member.name;
+        option.textContent = `#${member.id} - ${member.name}`;
         memberSelect.appendChild(option);
     });
 }
 
 // ==========================================
-// 5. EVENT LISTENERS
+// 6. EVENT LISTENERS
 // ==========================================
 function initEventListeners() {
     // Tab Switching
@@ -184,7 +215,7 @@ function initEventListeners() {
 }
 
 // ==========================================
-// 6. MEMBER MODAL HANDLERS
+// 7. MEMBER MODAL HANDLERS
 // ==========================================
 function openMemberModal() {
     document.getElementById("member-modal").classList.remove("hidden");
@@ -218,7 +249,7 @@ function handleAddMember() {
 }
 
 // ==========================================
-// 7. FORM SUBMISSION HANDLER
+// 8. FORM SUBMISSION HANDLER
 // ==========================================
 function handleFormSubmit(e) {
     e.preventDefault();
@@ -265,7 +296,18 @@ function showAlert(message, type) {
 }
 
 // ==========================================
-// 8. TAB RENDERING LOGIC
+// 9. OPENING BALANCE CALCULATION
+// ==========================================
+// Calculates carried forward balance from all previous years prior to currentYear
+function getMemberOpeningBalance(memberId, year) {
+    const allTransactions = loadTransactions();
+    return allTransactions
+        .filter(t => t.member === memberId && t.type === "الجمعية" && t.year < year)
+        .reduce((sum, t) => sum + t.amount, 0);
+}
+
+// ==========================================
+// 10. TAB RENDERING LOGIC
 // ==========================================
 function renderActiveTab() {
     const activeTabId = document.querySelector(".tab-content.active").id;
@@ -291,46 +333,56 @@ function renderAssociationTable(transactions, members) {
     const headerRow = document.getElementById("association-header-row");
     const tbody = document.getElementById("association-table-body");
     
-    // Build Header
-    let headerHTML = "<th>العضو</th>";
+    // Build Header: ID | Member | Opening Balance | Jan .. Dec | Total
+    let headerHTML = `<th class="col-id">ID</th><th class="col-name">العضو</th><th class="month-header-cell">رصيد سابق</th>`;
     ARABIC_MONTHS.forEach(m => {
-        headerHTML += `<th>${m}</th>`;
+        headerHTML += `<th class="month-header-cell">${m}</th>`;
     });
-    headerHTML += "<th>الإجمالي</th>";
+    headerHTML += `<th class="month-header-cell">الإجمالي</th>`;
     headerRow.innerHTML = headerHTML;
 
-    // Filter Association Transactions
+    // Filter Association Transactions for current year
     const assocTxns = transactions.filter(t => t.type === "الجمعية");
 
     tbody.innerHTML = "";
     if (members.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="14" style="text-align:center;">لا يوجد أعضاء مضافون.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="16" style="text-align:center;">لا يوجد أعضاء مضافون.</td></tr>`;
         return;
     }
 
     members.forEach(member => {
         let unpaidCount = 0;
-        let rowTotal = 0;
+        const openingBalance = getMemberOpeningBalance(member.id, currentYear);
+        let currentYearSum = 0;
         let cellsHTML = "";
 
         ARABIC_MONTHS.forEach(month => {
             const txns = assocTxns.filter(t => t.member === member.id && t.month === month);
-            const sum = txns.reduce((acc, curr) => acc + curr.amount, 0);
+            const monthSum = txns.reduce((acc, curr) => acc + curr.amount, 0);
 
-            if (sum > 0) {
-                rowTotal += sum;
-                cellsHTML += `<td class="paid-cell">${sum.toFixed(2)}</td>`;
+            if (monthSum > 0) {
+                currentYearSum += monthSum;
+                cellsHTML += `<td class="paid-cell">${monthSum.toFixed(2)}</td>`;
             } else {
                 unpaidCount++;
                 cellsHTML += `<td class="unpaid-cell">-</td>`;
             }
         });
 
+        const totalBalance = openingBalance + currentYearSum;
+
         const tr = document.createElement("tr");
         tr.innerHTML = `
-            <td><strong>${member.name} (${unpaidCount})</strong></td>
+            <td class="col-id">${member.id}</td>
+            <td class="col-name">
+                <div class="name-cell-wrapper">
+                    <span>${member.name}</span>
+                    ${unpaidCount > 0 ? `<span class="unpaid-badge" title="${unpaidCount} أشهر غير مدفوعة">${unpaidCount}</span>` : ''}
+                </div>
+            </td>
+            <td><strong>${openingBalance.toFixed(2)}</strong></td>
             ${cellsHTML}
-            <td><strong>${rowTotal.toFixed(2)}</strong></td>
+            <td><strong>${totalBalance.toFixed(2)}</strong></td>
         `;
         tbody.appendChild(tr);
     });
