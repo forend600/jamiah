@@ -259,38 +259,43 @@ function initEventListeners() {
     .getElementById("save-payment-btn")
     .addEventListener("click",saveMonthPayment);
     
-    document
-    .getElementById("cancel-payment-btn")
-    .addEventListener("click",()=>{
-    document
-    .getElementById("entry-form")
-    .addEventListener("submit",handleFormSubmit);
-    
-        document
-        .getElementById("edit-payment-modal")
-        .classList.add("hidden");
-
-        document
-
-.getElementById("save-description-btn")
-
-.addEventListener("click",saveDescription);
-
-
-
+    // Form Submit
 document
+    .getElementById("entry-form")
+    .addEventListener("submit", handleFormSubmit);
 
-.getElementById("cancel-description-btn")
+// Save Amount
+document
+    .getElementById("save-payment-btn")
+    .addEventListener("click", saveMonthPayment);
 
-.addEventListener("click",()=>{
+// Cancel Amount
+document
+    .getElementById("cancel-payment-btn")
+    .addEventListener("click", () => {
 
-    document
+        document
+            .getElementById("edit-payment-modal")
+            .classList.add("hidden");
 
-    .getElementById("edit-description-modal")
-
-    .classList.add("hidden");
-    
     });
+
+// Save Description
+document
+    .getElementById("save-description-btn")
+    .addEventListener("click", saveDescription);
+
+// Cancel Description
+document
+    .getElementById("cancel-description-btn")
+    .addEventListener("click", () => {
+
+        document
+            .getElementById("edit-description-modal")
+            .classList.add("hidden");
+
+    });
+
 }
 
 // ==========================================
@@ -740,27 +745,7 @@ t.description.substring(0,35)+"..."
         `;
 
         tbody.appendChild(tr);
-        tr.querySelector(".description-cell")
-
-.addEventListener("dblclick",function(){
-
-    editingDescriptionTransactionId=
-
-        Number(this.dataset.id);
-
-    document
-
-    .getElementById("edit-description-input")
-
-    .value=t.description;
-
-    document
-
-    .getElementById("edit-description-modal")
-
-    .classList.remove("hidden");
-
-});
+        
 
                 tr.querySelector(".delete-btn").addEventListener("click", function(e){
 
@@ -944,57 +929,9 @@ function saveMonthPayment(){
     renderActiveTab();
 
 }
-function editDescription(id){
 
-    const data = loadTransactions();
 
-    const t = data.find(x => x.id === id);
 
-    if(!t) return;
-
-    const value = prompt(
-        "تعديل الوصف",
-        t.description || ""
-    );
-
-    if(value === null)
-        return;
-
-    t.description = value.trim();
-
-    localStorage.setItem(
-        STORAGE_KEY_TRANSACTIONS,
-        JSON.stringify(data)
-    );
-
-    renderActiveTab();
-
-}
-
-function normalizeNumber(value){
-
-    return String(value)
-        .replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d))
-        .replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d));
-
-}
-renderActiveTab();
-
-}
-
-function normalizeNumber(value){
-
-    return String(value)
-
-        .replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d))
-
-        .replace(/[^\d.]/g,"");
-
-}
-    
-    renderActiveTab();
-
-}
 
 function saveDescription(){
 
@@ -1038,9 +975,9 @@ function normalizeNumber(value){
 
     return String(value)
 
-        .replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d))
+        .replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d))
 
-        .replace(/[^\d.]/g,"");
+        .replace(/[^\d.]/g, "");
 
 }
 
