@@ -190,7 +190,7 @@ async function syncToGoogleSheets() {
     const expenseData = [["ID", "Year", "Month", "Type", "Member", "Amount", "Description"]];
     
     appData.transactions.forEach(t => {
-        if (t.type === "الجمعية") incomeData.push([t.id, t.year, t.month, t.member, t.amount, t.description]);
+        if (t.type === "الجمعية") incomeData.push([t.id, t.year, t.month, m.name, t.amount, t.description]);
         else expenseData.push([t.id, t.year, t.month, t.type, t.member || "", t.amount, t.description]);
     });
     
