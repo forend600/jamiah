@@ -58,7 +58,7 @@ async function initializeGapiClient() {
 
 }
 
-function gisLoaded() {
+async function gisLoaded() {
     tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
         scope: SCOPES,
@@ -409,7 +409,7 @@ function renderMemberDropdown() {
 // ==========================================
 // 6. EVENT LISTENERS
 // ==========================================
-function initEventListeners() {
+async function initEventListeners() {
     // Tab Switching
     document.querySelectorAll(".nav-btn").forEach(btn => {
         btn.addEventListener("click", (e) => {
