@@ -462,7 +462,7 @@ function renderTransactionsTab() {
     const members = loadMembers();
     
     document.getElementById("opening-balance-value").textContent =
-        getOpeningBalance(currentYear).toFixed(2);
+        money(getOpeningBalance(currentYear));
     
     renderAssociationTable(transactions, members);
     renderStandardTable("المصروفات", "expenses-table-body", "expenses-year-total", transactions, members);
@@ -516,7 +516,7 @@ function renderAssociationTable(transactions, members) {
                     data-id="${txns[0].id}"
                     >
                     
-                    ${monthSum.toFixed(2)}
+                    ${money(monthSum)}
                     
                     </td>
                     
@@ -566,13 +566,18 @@ function renderAssociationTable(transactions, members) {
             <td class="col-id">${member.id}</td>
             <td class="col-name">
                 <div class="name-cell-wrapper">
-                    <span>${member.name}</span>
+                    <span
+                    style="cursor:pointer"
+                    onclick="showMissingMonths(${member.id})"
+                    >
+                    ${member.name}
+                    </span>
                     ${unpaidCount > 0 ? `<span class="unpaid-badge" title="${unpaidCount} أشهر غير مدفوعة">${unpaidCount}</span>` : ''}
                 </div>
             </td>
             
             ${cellsHTML}
-            <td><strong>${totalBalance.toFixed(2)}</strong></td>
+            <td><strong>${money(totalBalance)}</strong></td>
         `;
         tbody.appendChild(tr);
         tr.querySelectorAll(".payment-cell").forEach(cell=>{
@@ -604,7 +609,11 @@ function renderStandardTable(type, tbodyId, totalId, transactions, members) {
     const filteredTxns = transactions.filter(t => t.type === type);
     tbody.innerHTML = "";
     
-    let total = 0;
+    let total=0;
+
+    const monthTotals={};
+    
+    ARABIC_MONTHS.forEach(m=>monthTotals[m]=0);
 
     if (filteredTxns.length === 0) {
         tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">لا توجد عمليات مسجلة.</td></tr>`;
@@ -613,7 +622,8 @@ function renderStandardTable(type, tbodyId, totalId, transactions, members) {
     }
 
     filteredTxns.forEach(t => {
-        total += t.amount;
+        total+=t.amount;
+        monthTotals[t.month]+=t.amount;
         const memberObj = members.find(m => m.id === t.member);
         const memberName = memberObj ? memberObj.name : "-";
 
@@ -621,9 +631,32 @@ function renderStandardTable(type, tbodyId, totalId, transactions, members) {
         
         tr.innerHTML = `
             <td>${t.month}</td>
-            <td>${t.description || "-"}</td>
+            <td>
+                
+                ${
+                t.description && t.description.length>35
+                
+                ?
+                
+                `
+                ${t.description.substring(0,35)}...
+                
+                <button
+                onclick="showDescription(\`${t.description.replace(/`/g,"")}\`)"
+                >
+                المزيد
+                </button>
+                `
+                
+                :
+                
+                (t.description||"-")
+                
+                }
+                
+            </td>
             <td>${memberName}</td>
-            <td>${t.amount.toFixed(2)}</td>
+            <td>${money(t.amount)}</td>
             <td>
                 <button type="button"
                     class="edit-btn"
@@ -660,8 +693,20 @@ function renderStandardTable(type, tbodyId, totalId, transactions, members) {
         
         });
     });
-
-    totalElem.textContent = total.toFixed(2);
+    const totalsRow=document.createElement("tr");
+        
+        totalsRow.style.background="#f5f5f5";
+        
+        let html="<td><b>الإجمالي</b></td>";
+        
+        ARABIC_MONTHS.forEach(m=>{
+        
+            html+=`<td><b>${money(monthTotals[m])}</b></td>`;
+        
+        });
+        
+        tbody.appendChild(totalsRow);
+    totalElem.textContent=money(total);
 }
 
 // --- REPORTS TAB ---
@@ -680,10 +725,10 @@ function renderReportsTab() {
 
     const savings = totalIncome - totalExpenses - totalOthers;
 
-    document.getElementById("total-income-val").textContent = totalIncome.toFixed(2);
-    document.getElementById("total-expenses-val").textContent = totalExpenses.toFixed(2);
-    document.getElementById("total-others-val").textContent = totalOthers.toFixed(2);
-    document.getElementById("total-savings-val").textContent = savings.toFixed(2);
+    document.getElementById("total-income-val").textContent = money(totalIncome);
+    document.getElementById("total-expenses-val").textContent = money(totalExpenses);
+    document.getElementById("total-others-val").textContent = money(totalOthers);
+    document.getElementById("total-savings-val").textContent = money(savings);
 
     // Render Monthly Summary Table
     const tbody = document.getElementById("monthly-summary-body");
@@ -707,11 +752,11 @@ function renderReportsTab() {
         const tr = document.createElement("tr");
         tr.innerHTML = `
             <td><strong>${month}</strong></td>
-            <td>${mIncome.toFixed(2)}</td>
-            <td>${mExpenses.toFixed(2)}</td>
-            <td>${mOthers.toFixed(2)}</td>
+            <td>${money(mIncome)}</td>
+            <td>${money(mExpenses)}</td>
+            <td>${money(mOthers)}</td>
             <td style="font-weight: bold; color: ${mNet >= 0 ? '#2e7d32' : '#c62828'};">
-                ${mNet.toFixed(2)}
+                ${money(mNet)}
             </td>
         `;
         tbody.appendChild(tr);
@@ -803,5 +848,64 @@ function saveMonthPayment(){
     .classList.add("hidden");
 
     renderActiveTab();
+
+}
+function money(v){
+    return Number(v || 0).toLocaleString("en-US", {
+        maximumFractionDigits:0
+    });
+}
+function showMissingMonths(memberId){
+
+    const years=loadYears();
+    const all=loadTransactions();
+
+    let text="";
+
+    years.sort((a,b)=>a-b);
+
+    years.forEach(year=>{
+
+        let missing=[];
+
+        ARABIC_MONTHS.forEach((month,index)=>{
+
+            if(year>DEFAULT_YEAR)return;
+
+            if(year===DEFAULT_YEAR && index>CURRENT_MONTH_INDEX)return;
+
+            const paid=all.some(t=>
+
+                t.type==="الجمعية" &&
+                t.member===memberId &&
+                t.year===year &&
+                t.month===month
+
+            );
+
+            if(!paid)
+                missing.push(month);
+
+        });
+
+        if(missing.length){
+
+            text+=year+"\\n";
+            text+=missing.join(" ، ");
+            text+="\\n\\n";
+
+        }
+
+    });
+
+    if(text==="")
+        text="لا يوجد أشهر غير مدفوعة";
+
+    alert(text);
+
+}
+function showDescription(text){
+
+    alert(text || "لا يوجد وصف");
 
 }
