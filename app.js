@@ -73,7 +73,7 @@ async function loadAppFromGoogle() {
     let response;
     try {
         response = await gapi.client.drive.files.list({
-            q: "name=' ' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false",
+            q: "name='جمعية ال دواس' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false",
             spaces: 'drive',
         });
     } catch (err) { console.error(err); return; }
@@ -95,7 +95,7 @@ async function createGoogleSheet() {
 
     const sheetBody = {
         properties: {
-            title: "جمعية العائلة"
+            title: "جمعية ال دواس"
         },
         sheets: [
             {properties:{title:"الدخل"}},
