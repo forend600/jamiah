@@ -29,7 +29,8 @@ const SCOPES =
 let tokenClient;
 let gapiInited = false;
 let gisInited = false;
-let documentSpreadsheetId = null;
+let documentSpreadsheetId =
+    localStorage.getItem("family_fund_sheet_id");
 
 let appData = { transactions: [], members: [], years: [DEFAULT_YEAR] };
 
@@ -70,6 +71,16 @@ function handleAuthClick() {
 }
 
 async function loadAppFromGoogle() {
+    if (documentSpreadsheetId) {
+
+    await fetchGoogleSheetData();
+
+    initYearSelector();
+    renderMemberDropdown();
+    renderActiveTab();
+
+    return;
+}
     let response;
     try {
         response = await gapi.client.drive.files.list({
@@ -81,6 +92,11 @@ async function loadAppFromGoogle() {
     const files = response.result.files;
     if (files && files.length > 0) {
         documentSpreadsheetId = files[0].id;
+
+localStorage.setItem(
+    "family_fund_sheet_id",
+    documentSpreadsheetId
+);
         await fetchGoogleSheetData();
     } else {
         await createGoogleSheet();
@@ -103,16 +119,19 @@ async function createGoogleSheet() {
         sheets: [
             {properties:{title:"الدخل"}},
             {properties:{title:"المصروفات و اخرى"}},
-            {properties:{title:"الاعضاء"}},
-            {properties:{title:"السنوات"}}
+            {properties:{title:"الاعضاء"}}
         ]
     };
 
     const response =
     await gapi.client.sheets.spreadsheets.create({}, sheetBody);
 
-    documentSpreadsheetId =
-    response.result.spreadsheetId;
+    documentSpreadsheetId = response.result.spreadsheetId;
+
+localStorage.setItem(
+    "family_fund_sheet_id",
+    documentSpreadsheetId
+);
 
     await syncToGoogleSheets();
 
@@ -122,7 +141,7 @@ async function fetchGoogleSheetData() {
     try {
         const response = await gapi.client.sheets.spreadsheets.values.batchGet({
             spreadsheetId: documentSpreadsheetId,
-            ranges: ['الدخل!A:F', 'المصروفات و اخرى!A:G', 'الاعضاء!A:B', 'السنوات!A:A']
+            ranges: ['الدخل!A:F', 'المصروفات و اخرى!A:G', 'الاعضاء!A:B']
         });
         
         const ranges = response.result.valueRanges;
@@ -158,13 +177,7 @@ async function fetchGoogleSheetData() {
             });
         }
         
-        appData.years = [];
-        if (ranges[3].values) {
-            ranges[3].values.forEach(row => {
-                if(row[0] === "Year") return;
-                appData.years.push(Number(row[0]));
-            });
-        }
+        appData.years = [DEFAULT_YEAR];
         if(appData.years.length === 0) appData.years.push(DEFAULT_YEAR);
         
     } catch (err) { console.error("Data Fetch Error:", err); }
@@ -177,27 +190,24 @@ async function syncToGoogleSheets() {
     const expenseData = [["ID", "Year", "Month", "Type", "Member", "Amount", "Description"]];
     
     appData.transactions.forEach(t => {
-        if (t.type === "") incomeData.push([t.id, t.year, t.month, t.member, t.amount, t.description]);
+        if (t.type === "الجمعية") incomeData.push([t.id, t.year, t.month, t.member, t.amount, t.description]);
         else expenseData.push([t.id, t.year, t.month, t.type, t.member || "", t.amount, t.description]);
     });
     
     const membersData = [["ID", "Name"]];
     appData.members.forEach(m => membersData.push([m.id, m.name]));
     
-    const yearsData = [["Year"]];
-    appData.years.forEach(y => yearsData.push([y]));
     
     const data = [
         { range: 'الدخل!A:F', values: incomeData },
         { range: 'المصروفات و اخرى!A:G', values: expenseData },
-        { range: 'الاعضاء!A:B', values: membersData },
-        { range: 'السنوات!A:A', values: yearsData }
+        { range: 'الاعضاء!A:B', values: membersData }
     ];
     
     try {
         await gapi.client.sheets.spreadsheets.values.batchClear({
             spreadsheetId: documentSpreadsheetId,
-            ranges: ['الدخل!A:G', 'المصروفات و اخرى!A:G', 'الاعضاء!A:B', 'السنوات!A:A']
+            ranges: ['الدخل!A:G', 'المصروفات و اخرى!A:G', 'الاعضاء!A:B']
         });
         await gapi.client.sheets.spreadsheets.values.batchUpdate({
             spreadsheetId: documentSpreadsheetId,
