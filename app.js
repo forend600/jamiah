@@ -465,7 +465,7 @@ async function initEventListeners() {
     });
 
     // Add Year Button
-    document.getElementById("add-year-btn").addEventListener("click", () => {
+    document.getElementById("add-year-btn").addEventListener("click", async () => {
         const newYearStr = prompt("أدخل السنة الجديدة:");
         if (newYearStr) {
             const newYear = parseInt(newYearStr, 10);
