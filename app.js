@@ -37,61 +37,20 @@ let appData = { transactions: [], members: [], years: [DEFAULT_YEAR] };
 function gapiLoaded() { gapi.load('client', initializeGapiClient); }
 
 async function initializeGapiClient() {
-
-    await gapi.client.init({
-        apiKey: API_KEY,
-        discoveryDocs: DISCOVERY_DOCS
-    });
-
-    const savedToken = localStorage.getItem("google_access_token");
-
-    if(savedToken){
-
-        gapi.client.setToken({
-            access_token: savedToken,
-            token_type: "Bearer"
-        });
-
-    }
-
+    await gapi.client.init({ apiKey: API_KEY, discoveryDocs: DISCOVERY_DOCS });
     gapiInited = true;
-
-    const token = gapi.client.getToken();
-
-    if(token){
-
-        document.getElementById("login-overlay").style.display = "none";
-
-        await loadAppFromGoogle();
-
-    }
-
     checkEnableLogin();
-
 }
 
-async function gisLoaded() {
+function gisLoaded() {
     tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
         scope: SCOPES,
         callback: async (resp) => {
-
-    if(resp.error) throw resp;
-
-    localStorage.setItem(
-        "google_access_token",
-        resp.access_token
-    );
-
-    gapi.client.setToken({
-    access_token: resp.access_token
-});
-
-    document.getElementById("login-overlay").style.display="none";
-
-    await loadAppFromGoogle();
-
-},
+            if (resp.error !== undefined) throw (resp);
+            document.getElementById('login-overlay').style.display = 'none';
+            await loadAppFromGoogle();
+        },
     });
     gisInited = true;
     checkEnableLogin();
@@ -103,12 +62,7 @@ function checkEnableLogin() {
     }
 }
 
-async function handleAuthClick() {
-
-    // Wait until Google API client is fully initialized
-    while (!gapiInited) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-    }
+function handleAuthClick() {
 
     tokenClient.requestAccessToken({
         prompt: ""
@@ -121,7 +75,7 @@ async function loadAppFromGoogle() {
 
     await fetchGoogleSheetData();
 
-    await initYearSelector();
+    initYearSelector();
     renderMemberDropdown();
     renderActiveTab();
 
@@ -148,7 +102,7 @@ localStorage.setItem(
         await createGoogleSheet();
     }
     
-    await initYearSelector();
+    initYearSelector();
     renderMemberDropdown();
     renderActiveTab();
 }
@@ -187,11 +141,7 @@ async function fetchGoogleSheetData() {
     try {
         const response = await gapi.client.sheets.spreadsheets.values.batchGet({
             spreadsheetId: documentSpreadsheetId,
-            ranges: [
-                'الدخل!A:G',
-                'المصروفات و اخرى!A:H',
-                'الاعضاء!A:B'
-            ]
+            ranges: ['الدخل!A:F', 'المصروفات و اخرى!A:G', 'الاعضاء!A:B']
         });
         
         const ranges = response.result.valueRanges;
@@ -201,29 +151,21 @@ async function fetchGoogleSheetData() {
             ranges[0].values.forEach(row => {
                 if(row[0] === "ID") return;
                 appData.transactions.push({
-                    id:Number(row[0]),
-                    year:Number(row[1]),
-                    month:row[2],
-                    type:"الجمعية",
-                    member:Number(row[3]),
-                    amount:Number(row[5]),
-                    description:row[6]||""
-                });
+    id:Number(row[0]),
+    year:Number(row[1]),
+    month:row[2],
+    type:"الجمعية",
+    member:Number(row[3]),
+    amount:Number(row[4]),
+    description:row[5]||""
+});
             });
         }
         
         if (ranges[1].values) {
             ranges[1].values.forEach(row => {
                 if(row[0] === "ID") return;
-                appData.transactions.push({
-                    id: Number(row[0]),
-                    year: Number(row[1]),
-                    month: row[2],
-                    type: row[3],
-                    member: row[4] ? Number(row[4]) : null,
-                    amount: Number(row[6]),
-                    description: row[7] || ""
-                });
+                appData.transactions.push({ id: Number(row[0]), year: Number(row[1]), month: row[2], type: row[3], member: row[4] ? Number(row[4]) : null, amount: Number(row[5]), description: row[6] || "" });
             });
         }
         
@@ -235,13 +177,7 @@ async function fetchGoogleSheetData() {
             });
         }
         
-        if(!appData.years)
-            appData.years=[];
-        
-        if(!appData.years.includes(DEFAULT_YEAR))
-            appData.years.push(DEFAULT_YEAR);
-        
-        appData.years.sort((a,b)=>b-a);
+        appData.years = [DEFAULT_YEAR];
         if(appData.years.length === 0) appData.years.push(DEFAULT_YEAR);
         
     } catch (err) { console.error("Data Fetch Error:", err); }
@@ -250,60 +186,28 @@ async function fetchGoogleSheetData() {
 async function syncToGoogleSheets() {
     if (!documentSpreadsheetId) return;
     
-    const incomeData = [["ID", "Year", "Month", "Member ID", "Member Name", "Amount", "Description"]];
-    const expenseData = [["ID", "Year", "Month", "Type", "Member ID", "Member Name", "Amount", "Description"]];
+    const incomeData = [["ID", "Year", "Month", "Member", "Amount", "Description"]];
+    const expenseData = [["ID", "Year", "Month", "Type", "Member", "Amount", "Description"]];
     
     appData.transactions.forEach(t => {
-
-    const member = appData.members.find(m => m.id === t.member);
-
-    if (t.type === "الجمعية") {
-
-        incomeData.push([
-            t.id,
-            t.year,
-            t.month,
-            t.member,
-            member ? member.name : "",
-            t.amount,
-            t.description
-        ]);
-
-    } else {
-
-        expenseData.push([
-            t.id,
-            t.year,
-            t.month,
-            t.type,
-            t.member || "",
-            member ? member.name : "",
-            t.amount,
-            t.description
-        ]);
-
-    }
-
-});
+        if (t.type === "الجمعية") incomeData.push([t.id, t.year, t.month, t.member, t.amount, t.description]);
+        else expenseData.push([t.id, t.year, t.month, t.type, t.member || "", t.amount, t.description]);
+    });
     
     const membersData = [["ID", "Name"]];
     appData.members.forEach(m => membersData.push([m.id, m.name]));
     
     
     const data = [
-    { range: 'الدخل!A:G', values: incomeData },
-    { range: 'المصروفات و اخرى!A:H', values: expenseData },
-    { range: 'الاعضاء!A:B', values: membersData }
-];
+        { range: 'الدخل!A:F', values: incomeData },
+        { range: 'المصروفات و اخرى!A:G', values: expenseData },
+        { range: 'الاعضاء!A:B', values: membersData }
+    ];
     
     try {
         await gapi.client.sheets.spreadsheets.values.batchClear({
             spreadsheetId: documentSpreadsheetId,
-            ranges: [
-                'الدخل!A:G',
-                'المصروفات و اخرى!A:H',
-                'الاعضاء!A:B'
-            ]
+            ranges: ['الدخل!A:G', 'المصروفات و اخرى!A:G', 'الاعضاء!A:B']
         });
         await gapi.client.sheets.spreadsheets.values.batchUpdate({
             spreadsheetId: documentSpreadsheetId,
@@ -357,20 +261,19 @@ let editingDescriptionTransactionId = null;
 document.addEventListener("DOMContentLoaded", () => {
     initMonthSelector();
     initEventListeners();
-
 });
 
 // ==========================================
 // 5. UI INITIALIZATION & POPULATION
 // ==========================================
-async function initYearSelector() {
+function initYearSelector() {
     const yearSelect = document.getElementById("year-select");
     const reportYearSelect = document.getElementById("report-year-select");
     const entryYearSelect = document.getElementById("entry-year");
     const years = loadYears();
     
     if (!years.includes(DEFAULT_YEAR)) {
-        await saveYear(DEFAULT_YEAR);
+        saveYear(DEFAULT_YEAR);
         years.push(DEFAULT_YEAR);
         years.sort((a, b) => b - a);
     }
@@ -435,7 +338,7 @@ function renderMemberDropdown() {
 // ==========================================
 // 6. EVENT LISTENERS
 // ==========================================
-async function initEventListeners() {
+function initEventListeners() {
     // Tab Switching
     document.querySelectorAll(".nav-btn").forEach(btn => {
         btn.addEventListener("click", (e) => {
@@ -472,16 +375,14 @@ async function initEventListeners() {
     });
 
     // Add Year Button
-    document.getElementById("add-year-btn").addEventListener("click", async () => {
+    document.getElementById("add-year-btn").addEventListener("click", () => {
         const newYearStr = prompt("أدخل السنة الجديدة:");
         if (newYearStr) {
             const newYear = parseInt(newYearStr, 10);
             if (!isNaN(newYear) && newYear > 1900 && newYear < 2100) {
-                await saveYear(newYear);
-
+                saveYear(newYear);
                 currentYear = newYear;
-                
-                await initYearSelector();
+                initYearSelector();
                 renderActiveTab();
             } else {
                 alert("يرجى إدخال سنة صالحة.");
@@ -515,6 +416,10 @@ async function initEventListeners() {
     document.getElementById("save-member-btn").addEventListener("click", handleAddMember);
     document.getElementById("cancel-member-btn").addEventListener("click", closeMemberModal);
 
+    // Form Submit
+    document
+    .getElementById("save-payment-btn")
+    .addEventListener("click",saveMonthPayment);
     
     // Form Submit
 document
@@ -661,7 +566,7 @@ if(wasEditing){
 
 }else{
 
-    await saveTransaction(newTransaction);
+    saveTransaction(newTransaction);
 
 }
         
