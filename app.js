@@ -288,11 +288,32 @@ function handleFormSubmit(e) {
         amount: amount,
         description: description
     };
-
+    if(type==="الجمعية"){
+    
+        const exists=loadTransactions().find(t=>
+    
+            t.type==="الجمعية" &&
+            t.year===entryYear &&
+            t.month===month &&
+            t.member===parseInt(memberVal)
+    
+        );
+    
+        if(exists){
+    
+            if(!confirm("هذا العضو لديه دفعة لهذا الشهر.\nهل تريد إضافة دفعة أخرى؟"))
+                return;
+    
+        }
+    
+    }
     saveTransaction(newTransaction);
+        
     
     // Reset Form
     document.getElementById("entry-form").reset();
+    document.getElementById("entry-year").value=entryYear;
+    document.getElementById("month-select").selectedIndex=CURRENT_MONTH_INDEX;
     document.getElementById("type-select").dispatchEvent(new Event("change"));
     
     showAlert("تم حفظ العملية بنجاح!", "success");
@@ -348,7 +369,7 @@ function renderAssociationTable(transactions, members) {
     const tbody = document.getElementById("association-table-body");
     
     // Build Header: ID | Member | Opening Balance | Jan .. Dec | Total
-    let headerHTML = `<th class="col-id">ID</th><th class="col-name">العضو</th><th class="month-header-cell">رصيد سابق</th>`;
+    let headerHTML = `<th class="col-id">ID</th><th class="col-name">العضو</th>`;
     ARABIC_MONTHS.forEach(m => {
         headerHTML += `<th class="month-header-cell">${m}</th>`;
     });
@@ -366,31 +387,63 @@ function renderAssociationTable(transactions, members) {
 
     members.forEach(member => {
         let unpaidCount = 0;
-        const openingBalance = getMemberOpeningBalance(member.id, currentYear);
+        
         let currentYearSum = 0;
         let cellsHTML = "";
 
+        const allTransactions = loadTransactions();
+
         ARABIC_MONTHS.forEach((month, index) => {
-            const txns = assocTxns.filter(t => t.member === member.id && t.month === month);
+        
+            const txns = assocTxns.filter(t =>
+                t.member === member.id &&
+                t.month === month
+            );
+        
             const monthSum = txns.reduce((acc, curr) => acc + curr.amount, 0);
-
-            // التحقق مما إذا كان الشهر في المستقبل مقارنة بالتاريخ الحالي
-            const isFutureMonth = (currentYear > DEFAULT_YEAR) || (currentYear === DEFAULT_YEAR && index > CURRENT_MONTH_INDEX);
-
+        
             if (monthSum > 0) {
                 currentYearSum += monthSum;
                 cellsHTML += `<td class="paid-cell">${monthSum.toFixed(2)}</td>`;
-            } else if (!isFutureMonth) {
-                // يحسب كغير مدفوع فقط إذا لم يكن شهراً مستقبلياً
-                unpaidCount++;
-                cellsHTML += `<td class="unpaid-cell">-</td>`;
             } else {
-                // خلية فارغة للأشهر المستقبلية بدون تنبيه أحمر
-                cellsHTML += `<td>-</td>`;
+        
+                cellsHTML += `<td class="unpaid-cell">-</td>`;
             }
+        
+        });
+        
+        
+        /* ---------- calculate badge from ALL years ---------- */
+        
+        const years = loadYears();
+        
+        years.forEach(year => {
+        
+            ARABIC_MONTHS.forEach((month,index)=>{
+        
+                if(year > DEFAULT_YEAR)
+                    return;
+        
+                if(year===DEFAULT_YEAR && index>CURRENT_MONTH_INDEX)
+                    return;
+        
+                const paid = allTransactions.some(t=>
+        
+                    t.type==="الجمعية" &&
+                    t.member===member.id &&
+                    t.year===year &&
+                    t.month===month
+        
+                );
+        
+                if(!paid)
+                    unpaidCount++;
+        
+            });
+        
         });
 
-        const totalBalance = openingBalance + currentYearSum;
+        const totalBalance = currentYearSum;
 
         const tr = document.createElement("tr");
         tr.innerHTML = `
@@ -401,7 +454,7 @@ function renderAssociationTable(transactions, members) {
                     ${unpaidCount > 0 ? `<span class="unpaid-badge" title="${unpaidCount} أشهر غير مدفوعة">${unpaidCount}</span>` : ''}
                 </div>
             </td>
-            <td><strong>${openingBalance.toFixed(2)}</strong></td>
+            
             ${cellsHTML}
             <td><strong>${totalBalance.toFixed(2)}</strong></td>
         `;
@@ -430,12 +483,18 @@ function renderStandardTable(type, tbodyId, totalId, transactions, members) {
         const memberName = memberObj ? memberObj.name : "-";
 
         const tr = document.createElement("tr");
+        
         tr.innerHTML = `
             <td>${t.month}</td>
             <td>${t.description || "-"}</td>
             <td>${memberName}</td>
             <td>${t.amount.toFixed(2)}</td>
+            <td>
+                <button class="edit-btn" onclick="editTransaction(${t.id})">✏️</button>
+                <button class="delete-btn" onclick="deleteTransaction(${t.id})">🗑</button>
+            </td>
         `;
+        
         tbody.appendChild(tr);
     });
 
@@ -494,4 +553,47 @@ function renderReportsTab() {
         `;
         tbody.appendChild(tr);
     });
+}
+function deleteTransaction(id){
+
+    if(!confirm("حذف العملية؟"))
+        return;
+
+    let data=loadTransactions();
+
+    data=data.filter(t=>t.id!==id);
+
+    localStorage.setItem(
+        STORAGE_KEY_TRANSACTIONS,
+        JSON.stringify(data)
+    );
+
+    renderActiveTab();
+
+}
+
+function editTransaction(id){
+
+    const data=loadTransactions();
+
+    const t=data.find(x=>x.id===id);
+
+    if(!t) return;
+
+    document.querySelector(".nav-btn[data-tab='entry-tab']").click();
+
+    document.getElementById("entry-year").value=t.year;
+
+    document.getElementById("type-select").value=t.type;
+
+    document.getElementById("month-select").value=t.month;
+
+    document.getElementById("member-select").value=t.member;
+
+    document.getElementById("amount-input").value=t.amount;
+
+    document.getElementById("description-input").value=t.description;
+
+    deleteTransaction(id);
+
 }
