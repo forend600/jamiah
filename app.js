@@ -15,72 +15,185 @@ const STORAGE_KEY_MEMBERS = "family_fund_members";
 const STORAGE_KEY_YEARS = "family_fund_years";
 
 // ==========================================
-// 2. GOOGLE SHEETS BACKUP PLACEHOLDER (INACTIVE)
+// 2. GOOGLE API & AUTHENTICATION CONFIG
 // ==========================================
-const GOOGLE_SHEETS_CONFIG = {
-    enabled: false, // Change to true when activating Google Sheets backup
-    webAppUrl: ""   // Insert Google Apps Script Web App URL here later
-};
+const CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID'; // Replace with your Client ID
+const API_KEY = 'YOUR_GOOGLE_API_KEY';     // Replace with your API Key
+const DISCOVERY_DOCS = [
+    'https://sheets.googleapis.com/$discovery/rest?version=v4',
+    'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'
+];
+const SCOPES = 'https://www.googleapis.com/auth/drive.file';
 
-async function syncToGoogleSheetsPlaceholder(action, data) {
-    if (!GOOGLE_SHEETS_CONFIG.enabled || !GOOGLE_SHEETS_CONFIG.webAppUrl) {
-        return; // Inactive placeholder - reserved for future implementation
+let tokenClient;
+let gapiInited = false;
+let gisInited = false;
+let documentSpreadsheetId = null;
+
+let appData = { transactions: [], members: [], years: [DEFAULT_YEAR] };
+
+function gapiLoaded() { gapi.load('client', initializeGapiClient); }
+
+async function initializeGapiClient() {
+    await gapi.client.init({ apiKey: API_KEY, discoveryDocs: DISCOVERY_DOCS });
+    gapiInited = true;
+    checkEnableLogin();
+}
+
+function gisLoaded() {
+    tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: CLIENT_ID,
+        scope: SCOPES,
+        callback: async (resp) => {
+            if (resp.error !== undefined) throw (resp);
+            document.getElementById('login-overlay').style.display = 'none';
+            await loadAppFromGoogle();
+        },
+    });
+    gisInited = true;
+    checkEnableLogin();
+}
+
+function checkEnableLogin() {
+    if (gapiInited && gisInited) {
+        document.getElementById('google-login-btn').innerText = '   Google';
     }
+}
+
+function handleAuthClick() {
+    if (gapi.client.getToken() === null) tokenClient.requestAccessToken({prompt: 'consent'});
+    else tokenClient.requestAccessToken({prompt: ''});
+}
+
+async function loadAppFromGoogle() {
+    let response;
+    try {
+        response = await gapi.client.drive.files.list({
+            q: "name=' ' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false",
+            spaces: 'drive',
+        });
+    } catch (err) { console.error(err); return; }
+
+    const files = response.result.files;
+    if (files && files.length > 0) {
+        documentSpreadsheetId = files[0].id;
+        await fetchGoogleSheetData();
+    } else {
+        await createGoogleSheet();
+    }
+    
+    initYearSelector();
+    renderMemberDropdown();
+    renderActiveTab();
+}
+
+async function createGoogleSheet() {
+    const sheetBody = {
+        properties: { title: " " },
+        sheets: [
+            { properties: { title: "الدخل" } },
+            { properties: { title: "المصروفات و اخرى" } },
+            { properties: { title: "الاعضاء" } },
+            { properties: { title: "السنوات" } }
+        ]
+    };
+    const response = await gapi.client.sheets.spreadsheets.create({}, sheetBody);
+    documentSpreadsheetId = response.result.spreadsheetId;
+}
+
+async function fetchGoogleSheetData() {
+    try {
+        const response = await gapi.client.sheets.spreadsheets.values.batchGet({
+            spreadsheetId: documentSpreadsheetId,
+            ranges: ['الدخل!A:F', 'المصروفات و اخرى!A:G', 'الاعضاء!A:B', 'السنوات!A:A']
+        });
+        
+        const ranges = response.result.valueRanges;
+        appData.transactions = [];
+        
+        if (ranges[0].values) {
+            ranges[0].values.forEach(row => {
+                if(row[0] === "ID") return;
+                appData.transactions.push({ id: Number(row[0]), year: Number(row[1]), month: row[2], type: "", member: Number(row[3]), amount: Number(row[4]), description: row[5] || "" });
+            });
+        }
+        
+        if (ranges[1].values) {
+            ranges[1].values.forEach(row => {
+                if(row[0] === "ID") return;
+                appData.transactions.push({ id: Number(row[0]), year: Number(row[1]), month: row[2], type: row[3], member: row[4] ? Number(row[4]) : null, amount: Number(row[5]), description: row[6] || "" });
+            });
+        }
+        
+        appData.members = [];
+        if (ranges[2].values) {
+            ranges[2].values.forEach(row => {
+                if(row[0] === "ID") return;
+                appData.members.push({ id: Number(row[0]), name: row[1] });
+            });
+        }
+        
+        appData.years = [];
+        if (ranges[3].values) {
+            ranges[3].values.forEach(row => {
+                if(row[0] === "Year") return;
+                appData.years.push(Number(row[0]));
+            });
+        }
+        if(appData.years.length === 0) appData.years.push(DEFAULT_YEAR);
+        
+    } catch (err) { console.error("Data Fetch Error:", err); }
+}
+
+async function syncToGoogleSheets() {
+    if (!documentSpreadsheetId) return;
+    
+    const incomeData = [["ID", "Year", "Month", "Member", "Amount", "Description"]];
+    const expenseData = [["ID", "Year", "Month", "Type", "Member", "Amount", "Description"]];
+    
+    appData.transactions.forEach(t => {
+        if (t.type === "") incomeData.push([t.id, t.year, t.month, t.member, t.amount, t.description]);
+        else expenseData.push([t.id, t.year, t.month, t.type, t.member || "", t.amount, t.description]);
+    });
+    
+    const membersData = [["ID", "Name"]];
+    appData.members.forEach(m => membersData.push([m.id, m.name]));
+    
+    const yearsData = [["Year"]];
+    appData.years.forEach(y => yearsData.push([y]));
+    
+    const data = [
+        { range: 'الدخل!A:F', values: incomeData },
+        { range: 'المصروفات و اخرى!A:G', values: expenseData },
+        { range: 'الاعضاء!A:B', values: membersData },
+        { range: 'السنوات!A:A', values: yearsData }
+    ];
     
     try {
-        await fetch(GOOGLE_SHEETS_CONFIG.webAppUrl, {
-            method: "POST",
-            mode: "no-cors",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action, data, timestamp: new Date().toISOString() })
+        await gapi.client.sheets.spreadsheets.values.batchClear({
+            spreadsheetId: documentSpreadsheetId,
+            ranges: ['الدخل!A:G', 'المصروفات و اخرى!A:G', 'الاعضاء!A:B', 'السنوات!A:A']
         });
-    } catch (err) {
-        console.warn("Google Sheets Sync Placeholder Error:", err);
-    }
+        await gapi.client.sheets.spreadsheets.values.batchUpdate({
+            spreadsheetId: documentSpreadsheetId,
+            resource: { data: data, valueInputOption: 'RAW' }
+        });
+    } catch (err) { console.error("Sync Error:", err); }
 }
 
 // ==========================================
-// 3. DATA STORAGE WRAPPERS (Google Sheets Ready)
+// 3. DATA STORAGE WRAPPERS (In-Memory & Sheets Sync)
 // ==========================================
-function loadTransactions() {
-    const data = localStorage.getItem(STORAGE_KEY_TRANSACTIONS);
-    return data ? JSON.parse(data) : [];
-}
-
-function saveTransaction(transaction) {
-    const transactions = loadTransactions();
-    transactions.push(transaction);
-    localStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(transactions));
-    
-    // Backup hook
-    syncToGoogleSheetsPlaceholder("SAVE_TRANSACTION", transaction);
-}
-
-function loadMembers() {
-    const data = localStorage.getItem(STORAGE_KEY_MEMBERS);
-    return data ? JSON.parse(data) : [];
-}
-
-function saveMember(member) {
-    const members = loadMembers();
-    members.push(member);
-    localStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(members));
-    
-    // Backup hook
-    syncToGoogleSheetsPlaceholder("SAVE_MEMBER", member);
-}
-
-function loadYears() {
-    const data = localStorage.getItem(STORAGE_KEY_YEARS);
-    return data ? JSON.parse(data) : [DEFAULT_YEAR];
-}
-
+function loadTransactions() { return appData.transactions; }
+function saveTransaction(transaction) { appData.transactions.push(transaction); syncToGoogleSheets(); }
+function loadMembers() { return appData.members; }
+function saveMember(member) { appData.members.push(member); syncToGoogleSheets(); }
+function loadYears() { return appData.years; }
 function saveYear(year) {
-    const years = loadYears();
-    if (!years.includes(year)) {
-        years.push(year);
-        years.sort((a, b) => b - a);
-        localStorage.setItem(STORAGE_KEY_YEARS, JSON.stringify(years));
+    if (!appData.years.includes(year)) {
+        appData.years.push(year);
+        appData.years.sort((a, b) => b - a);
+        syncToGoogleSheets();
     }
 }
 
@@ -94,11 +207,8 @@ let editingMonthTransactionId = null;
 let editingDescriptionTransactionId = null;
 
 document.addEventListener("DOMContentLoaded", () => {
-    initYearSelector();
     initMonthSelector();
-    renderMemberDropdown();
     initEventListeners();
-    renderActiveTab();
 });
 
 // ==========================================
@@ -396,10 +506,7 @@ if(wasEditing){
 
     data[index]=newTransaction;
 
-    localStorage.setItem(
-        STORAGE_KEY_TRANSACTIONS,
-        JSON.stringify(data)
-    );
+    syncToGoogleSheets();
 
     editingTransactionId=null;
 
@@ -850,14 +957,9 @@ function deleteTransaction(id){
     if(!confirm("حذف العملية؟"))
         return;
 
-    let data=loadTransactions();
+    appData.transactions = appData.transactions.filter(t=>t.id!==id);
 
-    data=data.filter(t=>t.id!==id);
-
-    localStorage.setItem(
-        STORAGE_KEY_TRANSACTIONS,
-        JSON.stringify(data)
-    );
+    syncToGoogleSheets();
 
     renderActiveTab();
 
@@ -920,13 +1022,7 @@ function saveMonthPayment(){
 
     t.amount=amount;
 
-    localStorage.setItem(
-
-        STORAGE_KEY_TRANSACTIONS,
-
-        JSON.stringify(data)
-
-    );
+    syncToGoogleSheets();
 
     document
 
@@ -979,13 +1075,7 @@ function saveDescription(){
 
         .value;
 
-    localStorage.setItem(
-
-        STORAGE_KEY_TRANSACTIONS,
-
-        JSON.stringify(data)
-
-    );
+    syncToGoogleSheets();
 
     document
 
