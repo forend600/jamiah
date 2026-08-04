@@ -91,6 +91,7 @@ let currentYear = DEFAULT_YEAR;
 let editingTransactionId = null;
 
 let editingMonthTransactionId = null;
+let editingDescriptionTransactionId = null;
 
 document.addEventListener("DOMContentLoaded", () => {
     initYearSelector();
@@ -268,6 +269,26 @@ function initEventListeners() {
         document
         .getElementById("edit-payment-modal")
         .classList.add("hidden");
+
+        document
+
+.getElementById("save-description-btn")
+
+.addEventListener("click",saveDescription);
+
+
+
+document
+
+.getElementById("cancel-description-btn")
+
+.addEventListener("click",()=>{
+
+    document
+
+    .getElementById("edit-description-modal")
+
+    .classList.add("hidden");
     
     });
 }
@@ -676,32 +697,28 @@ if (filteredTxns.length === 0) {
             <td>${t.month}</td>
 
             <td
-                class="description-cell"
-                data-id="${t.id}"
-            >
 
-                ${
-                t.description && t.description.length>35
+class="description-cell"
 
-                ?
+data-id="${t.id}"
 
-                `
-                ${t.description.substring(0,35)}...
+>
 
-                <button
-                onclick="showDescription(\`${t.description.replace(/`/g,"")}\`)"
-                >
-                المزيد
-                </button>
-                `
+${
 
-                :
+t.description && t.description.length>35
 
-                (t.description||"-")
+?
 
-                }
+t.description.substring(0,35)+"..."
 
-            </td>
+:
+
+(t.description||"-")
+
+}
+
+</td>
 
             <td>${memberName}</td>
 
@@ -723,6 +740,27 @@ if (filteredTxns.length === 0) {
         `;
 
         tbody.appendChild(tr);
+        tr.querySelector(".description-cell")
+
+.addEventListener("dblclick",function(){
+
+    editingDescriptionTransactionId=
+
+        Number(this.dataset.id);
+
+    document
+
+    .getElementById("edit-description-input")
+
+    .value=t.description;
+
+    document
+
+    .getElementById("edit-description-modal")
+
+    .classList.remove("hidden");
+
+});
 
                 tr.querySelector(".delete-btn").addEventListener("click", function(e){
 
@@ -940,11 +978,80 @@ function normalizeNumber(value){
         .replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d));
 
 }
+renderActiveTab();
+
+}
+
+function normalizeNumber(value){
+
+    return String(value)
+
+        .replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d))
+
+        .replace(/[^\d.]/g,"");
+
+}
+    
+    renderActiveTab();
+
+}
+
+function saveDescription(){
+
+    const data=loadTransactions();
+
+    const t=data.find(x=>
+
+        x.id===editingDescriptionTransactionId
+
+    );
+
+    if(!t) return;
+
+    t.description=
+
+        document
+
+        .getElementById("edit-description-input")
+
+        .value;
+
+    localStorage.setItem(
+
+        STORAGE_KEY_TRANSACTIONS,
+
+        JSON.stringify(data)
+
+    );
+
+    document
+
+    .getElementById("edit-description-modal")
+
+    .classList.add("hidden");
+
+    renderActiveTab();
+
+}
+
+function normalizeNumber(value){
+
+    return String(value)
+
+        .replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d))
+
+        .replace(/[^\d.]/g,"");
+
+}
 
 function money(v){
-    return Number(v || 0).toLocaleString("en-US", {
+
+    return Number(v || 0).toLocaleString("en-US",{
+
         maximumFractionDigits:0
+
     });
+
 }
 function showMissingMonths(memberId){
 
