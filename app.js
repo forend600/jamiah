@@ -261,6 +261,9 @@ function initEventListeners() {
     document
     .getElementById("cancel-payment-btn")
     .addEventListener("click",()=>{
+    document
+    .getElementById("entry-form")
+    .addEventListener("submit",handleFormSubmit);
     
         document
         .getElementById("edit-payment-modal")
@@ -617,7 +620,7 @@ function renderStandardTable(type, tbodyId, totalId, transactions, members) {
 
     if (filteredTxns.length === 0) {
         tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">لا توجد عمليات مسجلة.</td></tr>`;
-        totalElem.textContent = "0.00";
+        totalElem.textContent = money(0);
         return;
     }
 
@@ -694,18 +697,17 @@ function renderStandardTable(type, tbodyId, totalId, transactions, members) {
         });
     });
     const totalsRow=document.createElement("tr");
-        
-        totalsRow.style.background="#f5f5f5";
-        
-        let html="<td><b>الإجمالي</b></td>";
-        
-        ARABIC_MONTHS.forEach(m=>{
-        
-            html+=`<td><b>${money(monthTotals[m])}</b></td>`;
-        
-        });
-        
-        tbody.appendChild(totalsRow);
+
+totalsRow.style.background="#f5f5f5";
+
+totalsRow.innerHTML=`
+<td colspan="2"><b>إجمالي الأشهر</b></td>
+<td colspan="3">
+${ARABIC_MONTHS.map(m=>`${m}: ${money(monthTotals[m])}`).join(" | ")}
+</td>
+`;
+
+tbody.appendChild(totalsRow);
     totalElem.textContent=money(total);
 }
 
