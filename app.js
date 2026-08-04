@@ -369,6 +369,32 @@ function showAlert(message, type) {
 // 9. OPENING BALANCE CALCULATION
 // ==========================================
 // Calculates carried forward balance from all previous years prior to currentYear
+function getOpeningBalance(year){
+
+    const all=loadTransactions();
+
+    let income=0;
+    let expenses=0;
+    let others=0;
+
+    all.forEach(t=>{
+
+        if(t.year>=year) return;
+
+        if(t.type==="الجمعية")
+            income+=t.amount;
+
+        else if(t.type==="المصروفات")
+            expenses+=t.amount;
+
+        else
+            others+=t.amount;
+
+    });
+
+    return income-expenses-others;
+
+}
 function getMemberOpeningBalance(memberId, year) {
     const allTransactions = loadTransactions();
     return allTransactions
@@ -525,12 +551,40 @@ function renderStandardTable(type, tbodyId, totalId, transactions, members) {
             <td>${memberName}</td>
             <td>${t.amount.toFixed(2)}</td>
             <td>
-                <button class="edit-btn" onclick="editTransaction(${t.id})">✏️</button>
-                <button class="delete-btn" onclick="deleteTransaction(${t.id})">🗑</button>
+                <button type="button"
+                    class="edit-btn"
+                    data-id="${t.id}">
+                    ✏️
+                </button>
+            
+                <button type="button"
+                    class="delete-btn"
+                    data-id="${t.id}">
+                    🗑
+                </button>
             </td>
         `;
         
         tbody.appendChild(tr);
+                tr.querySelector(".edit-btn").addEventListener("click", function(e){
+        
+            e.stopPropagation();
+        
+            editTransaction(
+                Number(this.dataset.id)
+            );
+        
+        });
+        
+        tr.querySelector(".delete-btn").addEventListener("click", function(e){
+        
+            e.stopPropagation();
+        
+            deleteTransaction(
+                Number(this.dataset.id)
+            );
+        
+        });
     });
 
     totalElem.textContent = total.toFixed(2);
