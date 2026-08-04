@@ -470,6 +470,26 @@ function renderTransactionsTab() {
     renderAssociationTable(transactions, members);
     renderStandardTable("المصروفات", "expenses-table-body", "expenses-year-total", transactions, members);
     renderStandardTable("أخرى", "others-table-body", "others-year-total", transactions, members);
+    const totalRow=document.createElement("tr");
+
+let html=`<td colspan="2"><b>الإجمالي</b></td>`;
+
+ARABIC_MONTHS.forEach(month=>{
+
+    html+=`<td><b>${money(monthTotals[month])}</b></td>`;
+
+});
+
+html+=`<td><b>${money(
+Object.values(monthTotals).reduce((a,b)=>a+b,0)
+)}</b></td>`;
+
+totalRow.innerHTML=html;
+
+totalRow.style.background="#eef6ff";
+totalRow.style.fontWeight="bold";
+
+tbody.appendChild(totalRow);
 }
 
 function renderAssociationTable(transactions, members) {
@@ -512,6 +532,7 @@ function renderAssociationTable(transactions, members) {
         
             if (monthSum > 0) {
                 currentYearSum += monthSum;
+                monthTotals[month]+=monthSum;
                 cellsHTML+=`
                     
                     <td
@@ -537,14 +558,23 @@ function renderAssociationTable(transactions, members) {
         const years = loadYears();
         
         years.forEach(year => {
-        
-            ARABIC_MONTHS.forEach((month,index)=>{
-        
-                if(year > DEFAULT_YEAR)
-                    return;
-        
-                if(year===DEFAULT_YEAR && index>CURRENT_MONTH_INDEX)
-                    return;
+
+    ARABIC_MONTHS.forEach((month,index)=>{
+
+        // don't count future years
+        if(year > CURRENT_DATE.getFullYear())
+            return;
+
+        // don't count future months of the current real year
+        if(
+            year === CURRENT_DATE.getFullYear() &&
+            index > CURRENT_DATE.getMonth()
+        )
+            return;
+
+        // if user is viewing a future year don't count anything
+        if(year > currentYear)
+            return;
         
                 const paid = allTransactions.some(t=>
         
@@ -611,6 +641,9 @@ function renderStandardTable(type, tbodyId, totalId, transactions, members) {
     
     const filteredTxns = transactions.filter(t => t.type === type);
     tbody.innerHTML = "";
+    const monthTotals={};
+
+ARABIC_MONTHS.forEach(m=>monthTotals[m]=0);
     
     let total=0;
 
@@ -696,18 +729,7 @@ function renderStandardTable(type, tbodyId, totalId, transactions, members) {
         
         });
     });
-    const totalsRow=document.createElement("tr");
-
-totalsRow.style.background="#f5f5f5";
-
-totalsRow.innerHTML=`
-<td colspan="2"><b>إجمالي الأشهر</b></td>
-<td colspan="3">
-${ARABIC_MONTHS.map(m=>`${m}: ${money(monthTotals[m])}`).join(" | ")}
-</td>
-`;
-
-tbody.appendChild(totalsRow);
+    
     totalElem.textContent=money(total);
 }
 
@@ -872,9 +894,17 @@ function showMissingMonths(memberId){
 
         ARABIC_MONTHS.forEach((month,index)=>{
 
-            if(year>DEFAULT_YEAR)return;
+    if(year > CURRENT_DATE.getFullYear())
+        return;
 
-            if(year===DEFAULT_YEAR && index>CURRENT_MONTH_INDEX)return;
+    if(
+        year === CURRENT_DATE.getFullYear() &&
+        index > CURRENT_DATE.getMonth()
+    )
+        return;
+
+    if(year > currentYear)
+        return;
 
             const paid=all.some(t=>
 
