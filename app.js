@@ -83,7 +83,9 @@ async function gisLoaded() {
         resp.access_token
     );
 
-    gapi.client.setToken(resp);
+    gapi.client.setToken({
+    access_token: resp.access_token
+});
 
     document.getElementById("login-overlay").style.display="none";
 
@@ -101,7 +103,12 @@ function checkEnableLogin() {
     }
 }
 
-function handleAuthClick() {
+async function handleAuthClick() {
+
+    // Wait until Google API client is fully initialized
+    while (!gapiInited) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+    }
 
     tokenClient.requestAccessToken({
         prompt: ""
