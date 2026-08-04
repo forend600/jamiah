@@ -315,11 +315,17 @@ function handleFormSubmit(e) {
     const entryYear = parseInt(document.getElementById("entry-year").value, 10);
     const type = document.getElementById("type-select").value;
     const month = document.getElementById("month-select").value;
-    const memberVal = document.getElementById("member-select").value;
-    const amount = parseFloat(document.getElementById("amount-input").value);
-    const description = document.getElementById("description-input").value.trim();
+const memberVal = document.getElementById("member-select").value;
 
-    if (type === "الجمعية" && (!memberVal || memberVal === "ADD_NEW")) {
+const amount = parseFloat(
+    normalizeNumber(
+        document.getElementById("amount-input").value
+    )
+);
+
+const description = document.getElementById("description-input").value.trim();
+
+if (type === "الجمعية" && (!memberVal || memberVal === "ADD_NEW")) {
         showAlert("يرجى اختيار عضو للعملية من نوع الجمعية.", "danger");
         return;
     }
@@ -664,73 +670,94 @@ if (filteredTxns.length === 0) {
         const memberObj = members.find(m => m.id === t.member);
         const memberName = memberObj ? memberObj.name : "-";
 
-        const tr = document.createElement("tr");
-        
+                const tr = document.createElement("tr");
+
         tr.innerHTML = `
             <td>${t.month}</td>
-            <td>
-                
+
+            <td
+                class="description-cell"
+                data-id="${t.id}"
+            >
+
                 ${
                 t.description && t.description.length>35
-                
+
                 ?
-                
+
                 `
                 ${t.description.substring(0,35)}...
-                
+
                 <button
                 onclick="showDescription(\`${t.description.replace(/`/g,"")}\`)"
                 >
                 المزيد
                 </button>
                 `
-                
+
                 :
-                
+
                 (t.description||"-")
-                
+
                 }
-                
+
             </td>
+
             <td>${memberName}</td>
-            <td>${money(t.amount)}</td>
+
+            <td
+                class="payment-cell"
+                data-id="${t.id}"
+            >
+                ${money(t.amount)}
+            </td>
+
             <td>
-                <button type="button"
-                    class="edit-btn"
-                    data-id="${t.id}">
-                    ✏️
-                </button>
-            
-                <button type="button"
+                <button
+                    type="button"
                     class="delete-btn"
                     data-id="${t.id}">
                     🗑
                 </button>
             </td>
         `;
-        
+
         tbody.appendChild(tr);
-                tr.querySelector(".edit-btn").addEventListener("click", function(e){
-        
+
+                tr.querySelector(".delete-btn").addEventListener("click", function(e){
+
             e.stopPropagation();
-        
-            editTransaction(
-                Number(this.dataset.id)
-            );
-        
-        });
-        
-        tr.querySelector(".delete-btn").addEventListener("click", function(e){
-        
-            e.stopPropagation();
-        
+
             deleteTransaction(
                 Number(this.dataset.id)
             );
-        
+
         });
+
+        tr.querySelector(".payment-cell").addEventListener("dblclick", function(){
+
+            editingMonthTransactionId = Number(this.dataset.id);
+
+            document
+            .getElementById("edit-payment-input")
+            .value = this.innerText.replace(/,/g,"");
+
+            document
+            .getElementById("edit-payment-modal")
+            .classList.remove("hidden");
+
+        });
+
+        tr.querySelector(".description-cell").addEventListener("dblclick", function(){
+
+            editDescription(
+                Number(this.dataset.id)
+            );
+
+        });
+
     });
-    
+
     totalElem.textContent=money(total);
 }
 
@@ -835,11 +862,15 @@ function editTransaction(id){
 }
 function saveMonthPayment(){
 
-    const amount=parseFloat(
+    const amount = parseFloat(
 
-        document
-        .getElementById("edit-payment-input")
-        .value
+        normalizeNumber(
+
+            document
+            .getElementById("edit-payment-input")
+            .value
+
+        )
 
     );
 
@@ -875,6 +906,41 @@ function saveMonthPayment(){
     renderActiveTab();
 
 }
+function editDescription(id){
+
+    const data = loadTransactions();
+
+    const t = data.find(x => x.id === id);
+
+    if(!t) return;
+
+    const value = prompt(
+        "تعديل الوصف",
+        t.description || ""
+    );
+
+    if(value === null)
+        return;
+
+    t.description = value.trim();
+
+    localStorage.setItem(
+        STORAGE_KEY_TRANSACTIONS,
+        JSON.stringify(data)
+    );
+
+    renderActiveTab();
+
+}
+
+function normalizeNumber(value){
+
+    return String(value)
+        .replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d))
+        .replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d));
+
+}
+
 function money(v){
     return Number(v || 0).toLocaleString("en-US", {
         maximumFractionDigits:0
