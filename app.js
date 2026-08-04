@@ -93,6 +93,9 @@ async function loadAppFromGoogle() {
 
 async function createGoogleSheet() {
 
+        console.log("Creating Google Sheet...");
+
+
     const sheetBody = {
         properties: {
             title: "جمعية ال دواس"
