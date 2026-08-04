@@ -702,26 +702,34 @@ if (filteredTxns.length === 0) {
             <td>${t.month}</td>
 
             <td
-
-class="description-cell"
-
-data-id="${t.id}"
-
+    class="description-cell"
+    data-id="${t.id}"
 >
 
-${
+    ${
+        t.description
+        ?
+        (
+            t.description.length > 35
+            ?
+            `
+            ${t.description.substring(0,35)}...
 
-t.description && t.description.length>35
+            <br>
 
-?
-
-t.description.substring(0,35)+"..."
-
-:
-
-(t.description||"-")
-
-}
+            <span
+                class="more-link"
+                onclick="event.stopPropagation();showDescription(${JSON.stringify(t.description)})"
+            >
+                المزيد
+            </span>
+            `
+            :
+            t.description
+        )
+        :
+        "-"
+    }
 
 </td>
 
@@ -930,7 +938,25 @@ function saveMonthPayment(){
 
 }
 
+function editDescription(id){
 
+    const data = loadTransactions();
+
+    const t = data.find(x => x.id === id);
+
+    if(!t) return;
+
+    editingDescriptionTransactionId = id;
+
+    document
+        .getElementById("edit-description-input")
+        .value = t.description || "";
+
+    document
+        .getElementById("edit-description-modal")
+        .classList.remove("hidden");
+
+}
 
 
 function saveDescription(){
