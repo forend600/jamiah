@@ -23,7 +23,8 @@ const DISCOVERY_DOCS = [
     'https://sheets.googleapis.com/$discovery/rest?version=v4',
     'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'
 ];
-const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+const SCOPES =
+'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets';
 
 let tokenClient;
 let gapiInited = false;
@@ -61,8 +62,11 @@ function checkEnableLogin() {
 }
 
 function handleAuthClick() {
-    if (gapi.client.getToken() === null) tokenClient.requestAccessToken({prompt: 'consent'});
-    else tokenClient.requestAccessToken({prompt: ''});
+
+    tokenClient.requestAccessToken({
+        prompt: ""
+    });
+
 }
 
 async function loadAppFromGoogle() {
@@ -88,17 +92,27 @@ async function loadAppFromGoogle() {
 }
 
 async function createGoogleSheet() {
+
     const sheetBody = {
-        properties: { title: " " },
+        properties: {
+            title: "جمعية العائلة"
+        },
         sheets: [
-            { properties: { title: "الدخل" } },
-            { properties: { title: "المصروفات و اخرى" } },
-            { properties: { title: "الاعضاء" } },
-            { properties: { title: "السنوات" } }
+            {properties:{title:"الدخل"}},
+            {properties:{title:"المصروفات و اخرى"}},
+            {properties:{title:"الاعضاء"}},
+            {properties:{title:"السنوات"}}
         ]
     };
-    const response = await gapi.client.sheets.spreadsheets.create({}, sheetBody);
-    documentSpreadsheetId = response.result.spreadsheetId;
+
+    const response =
+    await gapi.client.sheets.spreadsheets.create({}, sheetBody);
+
+    documentSpreadsheetId =
+    response.result.spreadsheetId;
+
+    await syncToGoogleSheets();
+
 }
 
 async function fetchGoogleSheetData() {
@@ -114,7 +128,15 @@ async function fetchGoogleSheetData() {
         if (ranges[0].values) {
             ranges[0].values.forEach(row => {
                 if(row[0] === "ID") return;
-                appData.transactions.push({ id: Number(row[0]), year: Number(row[1]), month: row[2], type: "", member: Number(row[3]), amount: Number(row[4]), description: row[5] || "" });
+                appData.transactions.push({
+    id:Number(row[0]),
+    year:Number(row[1]),
+    month:row[2],
+    type:"الجمعية",
+    member:Number(row[3]),
+    amount:Number(row[4]),
+    description:row[5]||""
+});
             });
         }
         
@@ -185,16 +207,33 @@ async function syncToGoogleSheets() {
 // 3. DATA STORAGE WRAPPERS (In-Memory & Sheets Sync)
 // ==========================================
 function loadTransactions() { return appData.transactions; }
-function saveTransaction(transaction) { appData.transactions.push(transaction); syncToGoogleSheets(); }
+async function saveTransaction(transaction) {
+
+    appData.transactions.push(transaction);
+
+    await syncToGoogleSheets();
+
+}
 function loadMembers() { return appData.members; }
-function saveMember(member) { appData.members.push(member); syncToGoogleSheets(); }
+async function saveMember(member) {
+
+    appData.members.push(member);
+
+    await syncToGoogleSheets();
+
+}
 function loadYears() { return appData.years; }
-function saveYear(year) {
-    if (!appData.years.includes(year)) {
-        appData.years.push(year);
-        appData.years.sort((a, b) => b - a);
-        syncToGoogleSheets();
-    }
+async function saveYear(year){
+
+    if(appData.years.includes(year))
+        return;
+
+    appData.years.push(year);
+
+    appData.years.sort((a,b)=>b-a);
+
+    await syncToGoogleSheets();
+
 }
 
 // ==========================================
@@ -422,7 +461,7 @@ function closeMemberModal() {
     document.getElementById("member-select").value = "";
 }
 
-function handleAddMember() {
+async function handleAddMember() {
     const input = document.getElementById("new-member-name");
     const name = input.value.trim();
     
@@ -435,7 +474,7 @@ function handleAddMember() {
     const newId = members.length > 0 ? Math.max(...members.map(m => m.id)) + 1 : 1;
     const newMember = { id: newId, name: name };
 
-    saveMember(newMember);
+    await saveMember(newMember);
     renderMemberDropdown();
     
     document.getElementById("member-select").value = newId;
@@ -445,7 +484,7 @@ function handleAddMember() {
 // ==========================================
 // 8. FORM SUBMISSION HANDLER
 // ==========================================
-function handleFormSubmit(e) {
+async function handleFormSubmit(e){
     e.preventDefault();
 
     const entryYear = parseInt(document.getElementById("entry-year").value, 10);
@@ -506,7 +545,7 @@ if(wasEditing){
 
     data[index]=newTransaction;
 
-    syncToGoogleSheets();
+    await syncToGoogleSheets();
 
     editingTransactionId=null;
 
@@ -952,14 +991,14 @@ function renderReportsTab() {
         tbody.appendChild(tr);
     });
 }
-function deleteTransaction(id){
+async function deleteTransaction(id){
 
     if(!confirm("حذف العملية؟"))
         return;
 
     appData.transactions = appData.transactions.filter(t=>t.id!==id);
 
-    syncToGoogleSheets();
+    await syncToGoogleSheets();
 
     renderActiveTab();
 
@@ -993,7 +1032,7 @@ function editTransaction(id){
     document.querySelector("#entry-form button[type='submit']").textContent="حفظ التعديل";
 
 }
-function saveMonthPayment(){
+async function saveMonthPayment(){
 
     const amount = parseFloat(
 
@@ -1022,7 +1061,7 @@ function saveMonthPayment(){
 
     t.amount=amount;
 
-    syncToGoogleSheets();
+    await syncToGoogleSheets();
 
     document
 
@@ -1055,7 +1094,7 @@ function editDescription(id){
 }
 
 
-function saveDescription(){
+async function saveDescription(){
 
     const data=loadTransactions();
 
@@ -1075,7 +1114,7 @@ function saveDescription(){
 
         .value;
 
-    syncToGoogleSheets();
+    await syncToGoogleSheets();
 
     document
 
