@@ -88,6 +88,7 @@ function saveYear(year) {
 // 4. APP STATE & INITIALIZATION
 // ==========================================
 let currentYear = DEFAULT_YEAR;
+let editingTransactionId = null;
 
 document.addEventListener("DOMContentLoaded", () => {
     initYearSelector();
@@ -307,7 +308,32 @@ function handleFormSubmit(e) {
         }
     
     }
+    const wasEditing = editingTransactionId !== null;
+
+if(wasEditing){
+
+    const data=loadTransactions();
+
+    const index=data.findIndex(t=>t.id===editingTransactionId);
+
+    newTransaction.id=editingTransactionId;
+
+    data[index]=newTransaction;
+
+    localStorage.setItem(
+        STORAGE_KEY_TRANSACTIONS,
+        JSON.stringify(data)
+    );
+
+    editingTransactionId=null;
+
+    document.querySelector("#entry-form button[type='submit']").textContent="حفظ العملية";
+
+}else{
+
     saveTransaction(newTransaction);
+
+}
         
     
     // Reset Form
@@ -316,7 +342,16 @@ function handleFormSubmit(e) {
     document.getElementById("month-select").selectedIndex=CURRENT_MONTH_INDEX;
     document.getElementById("type-select").dispatchEvent(new Event("change"));
     
-    showAlert("تم حفظ العملية بنجاح!", "success");
+    showAlert(
+wasEditing
+?
+
+"تم تعديل العملية بنجاح!"
+
+:
+
+"تم حفظ العملية بنجاح!"
+        ,"success");
 }
 
 function showAlert(message, type) {
@@ -574,26 +609,29 @@ function deleteTransaction(id){
 
 function editTransaction(id){
 
-    const data=loadTransactions();
+    const data = loadTransactions();
 
-    const t=data.find(x=>x.id===id);
+    const t = data.find(x => x.id === id);
 
     if(!t) return;
 
+    editingTransactionId = id;
+
     document.querySelector(".nav-btn[data-tab='entry-tab']").click();
 
-    document.getElementById("entry-year").value=t.year;
+    document.getElementById("entry-year").value = t.year;
 
-    document.getElementById("type-select").value=t.type;
+    document.getElementById("type-select").value = t.type;
+    document.getElementById("type-select").dispatchEvent(new Event("change"));
 
-    document.getElementById("month-select").value=t.month;
+    document.getElementById("month-select").value = t.month;
 
-    document.getElementById("member-select").value=t.member;
+    document.getElementById("member-select").value = t.member ?? "";
 
-    document.getElementById("amount-input").value=t.amount;
+    document.getElementById("amount-input").value = t.amount;
 
-    document.getElementById("description-input").value=t.description;
+    document.getElementById("description-input").value = t.description;
 
-    deleteTransaction(id);
+    document.querySelector("#entry-form button[type='submit']").textContent="حفظ التعديل";
 
 }
