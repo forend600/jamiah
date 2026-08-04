@@ -17,8 +17,8 @@ const STORAGE_KEY_YEARS = "family_fund_years";
 // ==========================================
 // 2. GOOGLE API & AUTHENTICATION CONFIG
 // ==========================================
-const CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID'; // Replace with your Client ID
-const API_KEY = 'YOUR_GOOGLE_API_KEY';     // Replace with your API Key
+const CLIENT_ID = '451645880185-tsp7hs1s6cq66l6qlf4h9d8l33emmme4.apps.googleusercontent.com'; // Replace with your Client ID
+const API_KEY = 'AIzaSyA54V4M6pE1_ST_e8gTPu-sE9Vy70ChNhc';     // Replace with your API Key
 const DISCOVERY_DOCS = [
     'https://sheets.googleapis.com/$discovery/rest?version=v4',
     'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'
