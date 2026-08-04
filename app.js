@@ -90,6 +90,8 @@ function saveYear(year) {
 let currentYear = DEFAULT_YEAR;
 let editingTransactionId = null;
 
+let editingMonthTransactionId = null;
+
 document.addEventListener("DOMContentLoaded", () => {
     initYearSelector();
     initMonthSelector();
@@ -252,7 +254,19 @@ function initEventListeners() {
     document.getElementById("cancel-member-btn").addEventListener("click", closeMemberModal);
 
     // Form Submit
-    document.getElementById("entry-form").addEventListener("submit", handleFormSubmit);
+    document
+    .getElementById("save-payment-btn")
+    .addEventListener("click",saveMonthPayment);
+    
+    document
+    .getElementById("cancel-payment-btn")
+    .addEventListener("click",()=>{
+    
+        document
+        .getElementById("edit-payment-modal")
+        .classList.add("hidden");
+    
+    });
 }
 
 // ==========================================
@@ -495,7 +509,18 @@ function renderAssociationTable(transactions, members) {
         
             if (monthSum > 0) {
                 currentYearSum += monthSum;
-                cellsHTML += `<td class="paid-cell">${monthSum.toFixed(2)}</td>`;
+                cellsHTML+=`
+                    
+                    <td
+                    class="paid-cell payment-cell"
+                    data-id="${txns[0].id}"
+                    >
+                    
+                    ${monthSum.toFixed(2)}
+                    
+                    </td>
+                    
+                    `;
             } else {
         
                 cellsHTML += `<td class="unpaid-cell">-</td>`;
@@ -550,6 +575,25 @@ function renderAssociationTable(transactions, members) {
             <td><strong>${totalBalance.toFixed(2)}</strong></td>
         `;
         tbody.appendChild(tr);
+        tr.querySelectorAll(".payment-cell").forEach(cell=>{
+
+    cell.addEventListener("dblclick",function(){
+
+        editingMonthTransactionId=
+
+        Number(this.dataset.id);
+
+        document
+        .getElementById("edit-payment-input")
+        .value=this.innerText;
+
+        document
+        .getElementById("edit-payment-modal")
+        .classList.remove("hidden");
+
+    });
+
+});
     });
 }
 
@@ -717,5 +761,47 @@ function editTransaction(id){
     document.getElementById("description-input").value = t.description;
 
     document.querySelector("#entry-form button[type='submit']").textContent="حفظ التعديل";
+
+}
+function saveMonthPayment(){
+
+    const amount=parseFloat(
+
+        document
+        .getElementById("edit-payment-input")
+        .value
+
+    );
+
+    if(isNaN(amount))
+        return;
+
+    const data=loadTransactions();
+
+    const t=data.find(x=>
+
+        x.id===editingMonthTransactionId
+
+    );
+
+    if(!t) return;
+
+    t.amount=amount;
+
+    localStorage.setItem(
+
+        STORAGE_KEY_TRANSACTIONS,
+
+        JSON.stringify(data)
+
+    );
+
+    document
+
+    .getElementById("edit-payment-modal")
+
+    .classList.add("hidden");
+
+    renderActiveTab();
 
 }
