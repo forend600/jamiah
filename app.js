@@ -48,12 +48,24 @@ async function initializeGapiClient() {
     if(savedToken){
 
         gapi.client.setToken({
-            access_token: savedToken
+            access_token: savedToken,
+            token_type: "Bearer"
         });
 
     }
 
     gapiInited = true;
+
+    const token = gapi.client.getToken();
+
+    if(token){
+
+        document.getElementById("login-overlay").style.display = "none";
+
+        await loadAppFromGoogle();
+
+    }
+
     checkEnableLogin();
 
 }
@@ -168,7 +180,11 @@ async function fetchGoogleSheetData() {
     try {
         const response = await gapi.client.sheets.spreadsheets.values.batchGet({
             spreadsheetId: documentSpreadsheetId,
-            ranges: ['الدخل!A:F', 'المصروفات و اخرى!A:G', 'الاعضاء!A:B']
+            ranges: [
+                'الدخل!A:G',
+                'المصروفات و اخرى!A:H',
+                'الاعضاء!A:B'
+            ]
         });
         
         const ranges = response.result.valueRanges;
@@ -192,7 +208,15 @@ async function fetchGoogleSheetData() {
         if (ranges[1].values) {
             ranges[1].values.forEach(row => {
                 if(row[0] === "ID") return;
-                appData.transactions.push({ id: Number(row[0]), year: Number(row[1]), month: row[2], type: row[3], member: row[4] ? Number(row[4]) : null, amount: Number(row[5]), description: row[6] || "" });
+                appData.transactions.push({
+                    id: Number(row[0]),
+                    year: Number(row[1]),
+                    month: row[2],
+                    type: row[3],
+                    member: row[4] ? Number(row[4]) : null,
+                    amount: Number(row[6]),
+                    description: row[7] || ""
+                });
             });
         }
         
@@ -223,9 +247,10 @@ async function syncToGoogleSheets() {
     const expenseData = [["ID", "Year", "Month", "Type", "Member ID", "Member Name", "Amount", "Description"]];
     
     appData.transactions.forEach(t => {
-        if (t.type === "الجمعية") {
 
-        const member = appData.members.find(m => m.id === t.member);
+    const member = appData.members.find(m => m.id === t.member);
+
+    if (t.type === "الجمعية") {
 
         incomeData.push([
             t.id,
@@ -259,17 +284,17 @@ async function syncToGoogleSheets() {
     
     
     const data = [
-        { range: 'الدخل!A:F', values: incomeData },
-        { range: 'المصروفات و اخرى!A:G', values: expenseData },
-        { range: 'الاعضاء!A:B', values: membersData }
-    ];
+    { range: 'الدخل!A:G', values: incomeData },
+    { range: 'المصروفات و اخرى!A:H', values: expenseData },
+    { range: 'الاعضاء!A:B', values: membersData }
+];
     
     try {
         await gapi.client.sheets.spreadsheets.values.batchClear({
             spreadsheetId: documentSpreadsheetId,
             ranges: [
                 'الدخل!A:G',
-                'المصروفات و اخرى!A:G',
+                'المصروفات و اخرى!A:H',
                 'الاعضاء!A:B'
             ]
         });
@@ -326,12 +351,6 @@ document.addEventListener("DOMContentLoaded", () => {
     initMonthSelector();
     initEventListeners();
 
-    const token = gapi.client.getToken();
-
-    if (token) {
-        document.getElementById("login-overlay").style.display = "none";
-        loadAppFromGoogle();
-    }
 });
 
 // ==========================================
