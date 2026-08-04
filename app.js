@@ -103,6 +103,7 @@ document.addEventListener("DOMContentLoaded", () => {
 // ==========================================
 function initYearSelector() {
     const yearSelect = document.getElementById("year-select");
+    const reportYearSelect = document.getElementById("report-year-select");
     const entryYearSelect = document.getElementById("entry-year");
     const years = loadYears();
     
@@ -118,8 +119,19 @@ function initYearSelector() {
     });
 
     if (yearSelect) {
+
         yearSelect.innerHTML = optionsHTML;
+    
         yearSelect.value = currentYear;
+    
+    }
+    
+    if(reportYearSelect){
+    
+        reportYearSelect.innerHTML = optionsHTML;
+    
+        reportYearSelect.value = currentYear;
+    
     }
     
     if (entryYearSelect) {
@@ -177,9 +189,24 @@ function initEventListeners() {
     });
 
     // Year Change
-    document.getElementById("year-select").addEventListener("change", (e) => {
-        currentYear = parseInt(e.target.value, 10);
+    document.getElementById("year-select").addEventListener("change",(e)=>{
+
+        currentYear=parseInt(e.target.value);
+    
+        document.getElementById("report-year-select").value=currentYear;
+    
         renderActiveTab();
+    
+    });
+    
+    document.getElementById("report-year-select").addEventListener("change",(e)=>{
+    
+        currentYear=parseInt(e.target.value);
+    
+        document.getElementById("year-select").value=currentYear;
+    
+        renderActiveTab();
+    
     });
 
     // Add Year Button
@@ -419,7 +446,10 @@ function renderActiveTab() {
 function renderTransactionsTab() {
     const transactions = loadTransactions().filter(t => t.year === currentYear);
     const members = loadMembers();
-
+    
+    document.getElementById("opening-balance-value").textContent =
+        getOpeningBalance(currentYear).toFixed(2);
+    
     renderAssociationTable(transactions, members);
     renderStandardTable("المصروفات", "expenses-table-body", "expenses-year-total", transactions, members);
     renderStandardTable("أخرى", "others-table-body", "others-year-total", transactions, members);
@@ -594,7 +624,7 @@ function renderStandardTable(type, tbodyId, totalId, transactions, members) {
 function renderReportsTab() {
     const transactions = loadTransactions().filter(t => t.year === currentYear);
 
-    let totalIncome = 0;
+    let totalIncome = getOpeningBalance(currentYear);
     let totalExpenses = 0;
     let totalOthers = 0;
 
