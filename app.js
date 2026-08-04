@@ -470,26 +470,7 @@ function renderTransactionsTab() {
     renderAssociationTable(transactions, members);
     renderStandardTable("المصروفات", "expenses-table-body", "expenses-year-total", transactions, members);
     renderStandardTable("أخرى", "others-table-body", "others-year-total", transactions, members);
-    const totalRow=document.createElement("tr");
-
-let html=`<td colspan="2"><b>الإجمالي</b></td>`;
-
-ARABIC_MONTHS.forEach(month=>{
-
-    html+=`<td><b>${money(monthTotals[month])}</b></td>`;
-
-});
-
-html+=`<td><b>${money(
-Object.values(monthTotals).reduce((a,b)=>a+b,0)
-)}</b></td>`;
-
-totalRow.innerHTML=html;
-
-totalRow.style.background="#eef6ff";
-totalRow.style.fontWeight="bold";
-
-tbody.appendChild(totalRow);
+    
 }
 
 function renderAssociationTable(transactions, members) {
@@ -506,6 +487,9 @@ function renderAssociationTable(transactions, members) {
 
     // Filter Association Transactions for current year
     const assocTxns = transactions.filter(t => t.type === "الجمعية");
+    const monthTotals = {};
+
+ARABIC_MONTHS.forEach(m => monthTotals[m] = 0);
 
     tbody.innerHTML = "";
     if (members.length === 0) {
@@ -625,7 +609,7 @@ function renderAssociationTable(transactions, members) {
         .getElementById("edit-payment-input")
         .value=this.innerText;
 
-        document
+               document
         .getElementById("edit-payment-modal")
         .classList.remove("hidden");
 
@@ -633,25 +617,42 @@ function renderAssociationTable(transactions, members) {
 
 });
     });
+
+    const totalRow = document.createElement("tr");
+
+    let html = `<td colspan="2"><b>الإجمالي</b></td>`;
+
+    ARABIC_MONTHS.forEach(month => {
+        html += `<td><b>${money(monthTotals[month])}</b></td>`;
+    });
+
+    html += `<td><b>${
+        money(
+            Object.values(monthTotals).reduce((a,b)=>a+b,0)
+        )
+    }</b></td>`;
+
+    totalRow.innerHTML = html;
+    totalRow.style.background = "#eef6ff";
+    totalRow.style.fontWeight = "bold";
+
+    tbody.appendChild(totalRow);
 }
 
 function renderStandardTable(type, tbodyId, totalId, transactions, members) {
     const tbody = document.getElementById(tbodyId);
     const totalElem = document.getElementById(totalId);
-    
+
     const filteredTxns = transactions.filter(t => t.type === type);
-    tbody.innerHTML = "";
-    const monthTotals={};
+tbody.innerHTML = "";
 
-ARABIC_MONTHS.forEach(m=>monthTotals[m]=0);
-    
-    let total=0;
+let total = 0;
 
-    const monthTotals={};
-    
-    ARABIC_MONTHS.forEach(m=>monthTotals[m]=0);
+const monthTotals = {};
 
-    if (filteredTxns.length === 0) {
+ARABIC_MONTHS.forEach(m => monthTotals[m] = 0);
+
+if (filteredTxns.length === 0) {
         tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">لا توجد عمليات مسجلة.</td></tr>`;
         totalElem.textContent = money(0);
         return;
