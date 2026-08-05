@@ -1097,7 +1097,19 @@ function renderReportsTab() {
     document.getElementById("total-income-val").textContent = money(totalIncome);
     document.getElementById("total-expenses-val").textContent = money(totalExpenses);
     document.getElementById("total-others-val").textContent = money(totalOthers);
-    document.getElementById("total-savings-val").textContent = money(savings);
+    const savingsElement = document.getElementById("total-savings-val");
+
+    savingsElement.textContent = money(savings);
+    
+    if (savings < 0) {
+    
+        savingsElement.style.color = "#d32f2f";
+    
+    } else {
+    
+        savingsElement.style.color = "#2e7d32";
+    
+    }
 
     // Render Monthly Summary Table
     const tbody = document.getElementById("monthly-summary-body");
