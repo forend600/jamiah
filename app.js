@@ -788,7 +788,7 @@ function renderAssociationTable(transactions, members) {
     ARABIC_MONTHS.forEach(m => {
         headerHTML += `<th class="month-header-cell">${m}</th>`;
     });
-    headerHTML += `<th class="month-header-cell">الإجمالي</th>`;
+    headerHTML += `<th class="month-header-cell">اجمالي الشهر</th>`;
     headerRow.innerHTML = headerHTML;
 
     // Filter Association Transactions for current year
@@ -938,7 +938,7 @@ ARABIC_MONTHS.forEach(m => monthTotals[m] = 0);
 
     const totalRow = document.createElement("tr");
 
-    let html = `<td colspan="2"><b>الإجمالي</b></td>`;
+    let html = `<td colspan="2"><b>اجمالي العضو</b></td>`;
 
     ARABIC_MONTHS.forEach(month => {
         html += `<td><b>${money(monthTotals[month])}</b></td>`;
