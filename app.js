@@ -35,15 +35,29 @@ let documentSpreadsheetId = null;
 
 let appData = { transactions: [], members: [], years: [DEFAULT_YEAR] };
 
-function gapiLoaded() { gapi.load('client', initializeGapiClient); }
+window.gapiLoaded = function () {
+
+    gapi.load("client", initializeGapiClient);
+
+};
 
 async function initializeGapiClient() {
-    await gapi.client.init({ apiKey: API_KEY, discoveryDocs: DISCOVERY_DOCS });
+
+    await gapi.client.init({
+
+        apiKey: API_KEY,
+
+        discoveryDocs: DISCOVERY_DOCS
+
+    });
+
     gapiInited = true;
+
     checkEnableLogin();
+
 }
 
-function gisLoaded() {
+window.gisLoaded = function () {
     tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
         scope: SCOPES,
@@ -67,21 +81,7 @@ function gisLoaded() {
 
     checkEnableLogin();
 
-    const lastLogin = Number(
-        localStorage.getItem("google_last_login") || 0
-    );
-
-    const sevenDays = 7 * 24 * 60 * 60 * 1000;
-
-    if (Date.now() - lastLogin < sevenDays) {
-
-        setTimeout(() => {
-
-            handleAuthClick();
-
-        }, 300);
-
-    }
+    
 }
 
 function checkEnableLogin() {
@@ -91,12 +91,29 @@ function checkEnableLogin() {
 
     authReady = true;
 
-    const btn =
-        document.getElementById("google-login-btn");
+    const btn = document.getElementById("google-login-btn");
 
     btn.disabled = false;
 
     btn.innerText = "Google";
+
+    const lastLogin = Number(
+
+        localStorage.getItem("google_last_login") || 0
+
+    );
+
+    const sevenDays = 7 * 24 * 60 * 60 * 1000;
+
+    if (
+
+        Date.now() - lastLogin < sevenDays
+
+    ) {
+
+        handleAuthClick();
+
+    }
 
 }
 
