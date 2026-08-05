@@ -48,13 +48,40 @@ function gisLoaded() {
         client_id: CLIENT_ID,
         scope: SCOPES,
         callback: async (resp) => {
-            if (resp.error !== undefined) throw (resp);
-            document.getElementById('login-overlay').style.display = 'none';
+
+            if (resp.error) throw resp;
+
+            localStorage.setItem(
+                "google_last_login",
+                Date.now()
+            );
+
+            document.getElementById("login-overlay").style.display = "none";
+
             await loadAppFromGoogle();
+
         },
     });
+
     gisInited = true;
+
     checkEnableLogin();
+
+    const lastLogin = Number(
+        localStorage.getItem("google_last_login") || 0
+    );
+
+    const sevenDays = 7 * 24 * 60 * 60 * 1000;
+
+    if (Date.now() - lastLogin < sevenDays) {
+
+        setTimeout(() => {
+
+            handleAuthClick();
+
+        }, 300);
+
+    }
 }
 
 function checkEnableLogin() {
@@ -73,41 +100,97 @@ function checkEnableLogin() {
 
 }
 
-function handleAuthClick() {
+async function handleAuthClick() {
 
-    tokenClient.requestAccessToken({
-        prompt: ""
-    });
+    if (!authReady)
+        return;
+
+    if (!tokenClient)
+        return;
+
+    if (isSigningIn)
+        return;
+
+    isSigningIn = true;
+
+    try{
+
+        tokenClient.requestAccessToken({
+
+            prompt:""
+
+        });
+
+    }finally{
+
+        setTimeout(()=>{
+
+            isSigningIn=false;
+
+        },1500);
+
+    }
 
 }
 
 async function loadAppFromGoogle() {
+
+    while (
+        !gapi.client ||
+        !gapi.client.drive ||
+        !gapi.client.sheets
+    ) {
+
+        await new Promise(resolve => setTimeout(resolve, 250));
+
+    }
+
     let response;
+
     try {
+
         response = await gapi.client.drive.files.list({
+
             q: "name='جمعية ال دواس' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false",
-            spaces: 'drive',
+
+            spaces: "drive"
+
         });
-    } catch (err) { console.error(err); return; }
+
+    } catch (err) {
+
+        console.error(err);
+
+        return;
+
+    }
 
     const files = response.result.files;
+
     if (files && files.length > 0) {
+
         documentSpreadsheetId = files[0].id;
+
         await fetchGoogleSheetData();
+
     } else {
+
         await createGoogleSheet();
+
     }
-    
+
     initYearSelector();
 
-currentYear = DEFAULT_YEAR;
+    currentYear = DEFAULT_YEAR;
 
-document.getElementById("year-select").value = DEFAULT_YEAR;
-document.getElementById("report-year-select").value = DEFAULT_YEAR;
-document.getElementById("entry-year").value = DEFAULT_YEAR;
+    document.getElementById("year-select").value = DEFAULT_YEAR;
+    document.getElementById("report-year-select").value = DEFAULT_YEAR;
+    document.getElementById("entry-year").value = DEFAULT_YEAR;
 
-renderMemberDropdown();
-renderActiveTab();
+    renderMemberDropdown();
+
+    renderActiveTab();
+
 }
 
 async function createGoogleSheet() {
