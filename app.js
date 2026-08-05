@@ -102,7 +102,7 @@ async function createGoogleSheet() {
 
     const sheetBody = {
         properties: {
-            title: "جمعية العائلة"
+            title: "جمعية ال دواس"
         },
         sheets: [
             {properties:{title:"الدخل"}},
@@ -517,7 +517,7 @@ const amount = parseFloat(
 const description = document.getElementById("description-input").value.trim();
 
 if (type === "الجمعية" && (!memberVal || memberVal === "ADD_NEW")) {
-        showAlert("يرجى اختيار عضو للعملية من نوع الجمعية.", "danger");
+        showAlert("يرجى اختيار عضو.", "danger");
         return;
     }
 
