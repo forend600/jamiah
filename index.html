@@ -99,11 +99,11 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 16px; border-bottom: 2px solid var(--bg-color); padding-bottom: 8px;">
                     <h2 style="margin-bottom: 0; border-bottom: none; padding-bottom: 0;">جدول الجمعية</h2>
                     <div class="year-selector-container">
-                        <label for="year-select">عرض سنة:</label>
+                        <label for="year-select">السنة:</label>
                     
                         <select id="year-select"></select>
                     
-                        <button id="add-year-btn" type="button">+ سنة</button>
+                        <button id="add-year-btn" type="button">+ أضف سنة</button>
                     
                         <span
                             id="opening-balance-box"
@@ -112,7 +112,7 @@
                                 font-weight:bold;
                                 color:#2e7d32;
                             ">
-                            الرصيد الافتتاحي :
+                            رصيد سابق :
                             <span id="opening-balance-value">0</span>
                         </span>
                     
@@ -136,10 +136,10 @@
                         <thead>
                             <tr class="styled-header-row">
                                 <th>الشهر</th>
-                                <th>البيان / الوصف</th>
+                                <th>الوصف</th>
                                 <th>العضو</th>
                                 <th>المبلغ</th>
-                                <th>الإجراءات</th>
+                                <th>حذف</th>
                             </tr>
                         </thead>
                         <tbody id="expenses-table-body"></tbody>
@@ -161,10 +161,10 @@
                         <thead>
                             <tr class="styled-header-row">
                                 <th>الشهر</th>
-                                <th>البيان / الوصف</th>
+                                <th>الوصف</th>
                                 <th>العضو</th>
                                 <th>المبلغ</th>
-                                <th>الإجراءات</th>
+                                <th>حذف</th>
                             </tr>
                         </thead>
                         <tbody id="others-table-body"></tbody>
@@ -185,7 +185,7 @@
 
                 <div class="year-selector-container">
             
-                    <label>عرض سنة:</label>
+                    <label>تقرير سنة:</label>
             
                     <select id="report-year-select"></select>
             
@@ -206,7 +206,7 @@
                     <p id="total-others-val">0</p>
                 </div>
                 <div class="metric-card metric-savings">
-                    <h3>الوفورات / المتبقي</h3>
+                    <h3>المتبقي</h3>
                     <p id="total-savings-val">0</p>
                 </div>
             </div>
@@ -218,10 +218,10 @@
                         <thead>
                             <tr class="styled-header-row">
                                 <th>الشهر</th>
-                                <th>الدخل (الجمعية)</th>
+                                <th>الجمعية</th>
                                 <th>المصروفات</th>
                                 <th>أخرى</th>
-                                <th>الصافي الشهري</th>
+                                <th>صافي الشهر</th>
                             </tr>
                         </thead>
                         <tbody id="monthly-summary-body"></tbody>
