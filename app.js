@@ -29,6 +29,8 @@ const SCOPES =
 let tokenClient;
 let gapiInited = false;
 let gisInited = false;
+let authReady = false;
+let isSigningIn = false;
 let documentSpreadsheetId = null;
 
 let appData = { transactions: [], members: [], years: [DEFAULT_YEAR] };
@@ -56,9 +58,19 @@ function gisLoaded() {
 }
 
 function checkEnableLogin() {
-    if (gapiInited && gisInited) {
-        document.getElementById('google-login-btn').innerText = '   Google';
-    }
+
+    if (!(gapiInited && gisInited))
+        return;
+
+    authReady = true;
+
+    const btn =
+        document.getElementById("google-login-btn");
+
+    btn.disabled = false;
+
+    btn.innerText = "Google";
+
 }
 
 function handleAuthClick() {
