@@ -87,8 +87,15 @@ async function loadAppFromGoogle() {
     }
     
     initYearSelector();
-    renderMemberDropdown();
-    renderActiveTab();
+
+currentYear = DEFAULT_YEAR;
+
+document.getElementById("year-select").value = DEFAULT_YEAR;
+document.getElementById("report-year-select").value = DEFAULT_YEAR;
+document.getElementById("entry-year").value = DEFAULT_YEAR;
+
+renderMemberDropdown();
+renderActiveTab();
 }
 
 async function createGoogleSheet() {
@@ -246,8 +253,15 @@ let editingMonthTransactionId = null;
 let editingDescriptionTransactionId = null;
 
 document.addEventListener("DOMContentLoaded", () => {
+
+    // Always show the current year immediately
+    appData.years = [DEFAULT_YEAR];
+
+    initYearSelector();
     initMonthSelector();
+    renderMemberDropdown();
     initEventListeners();
+
 });
 
 // ==========================================
@@ -260,10 +274,12 @@ function initYearSelector() {
     const years = loadYears();
     
     if (!years.includes(DEFAULT_YEAR)) {
-        saveYear(DEFAULT_YEAR);
-        years.push(DEFAULT_YEAR);
-        years.sort((a, b) => b - a);
-    }
+
+    years.push(DEFAULT_YEAR);
+
+    years.sort((a,b)=>b-a);
+
+}
     
     let optionsHTML = "";
     years.forEach(year => {
