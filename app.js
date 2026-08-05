@@ -812,7 +812,7 @@ ARABIC_MONTHS.forEach(m => monthTotals[m] = 0);
         const allTransactions = loadTransactions();
 
         ARABIC_MONTHS.forEach((month, index) => {
-        
+
             const txns = assocTxns.filter(t =>
                 t.member === member.id &&
                 t.month === month
@@ -821,23 +821,35 @@ ARABIC_MONTHS.forEach(m => monthTotals[m] = 0);
             const monthSum = txns.reduce((acc, curr) => acc + curr.amount, 0);
         
             if (monthSum > 0) {
+        
                 currentYearSum += monthSum;
-                monthTotals[month]+=monthSum;
-                cellsHTML+=`
-                    
+                monthTotals[month] += monthSum;
+        
+                cellsHTML += `
                     <td
-                    class="paid-cell payment-cell"
-                    data-id="${txns[0].id}"
+                        class="paid-cell payment-cell"
+                        data-id="${txns[0].id}"
                     >
-                    
-                    ${money(monthSum)}
-                    
+                        ${money(monthSum)}
                     </td>
-                    
-                    `;
+                `;
+        
             } else {
         
-                cellsHTML += `<td class="unpaid-cell">-</td>`;
+                const isFutureMonth =
+                    currentYear === CURRENT_DATE.getFullYear() &&
+                    index > CURRENT_DATE.getMonth();
+        
+                if (isFutureMonth) {
+        
+                    cellsHTML += `<td>-</td>`;
+        
+                } else {
+        
+                    cellsHTML += `<td class="unpaid-cell">-</td>`;
+        
+                }
+        
             }
         
         });
